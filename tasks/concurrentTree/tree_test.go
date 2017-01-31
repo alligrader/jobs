@@ -1,14 +1,34 @@
-package tree_tester
+package concurrentTree
 
-import (
-	"context"
+import(
+	//"fmt"
 	"testing"
+	"context"
+	//"time"
+	//"log"
 )
 
-type (
-	Visitable interface {
-		Visit(context.Context) (context.Context, error)
+func TestPrint(t *testing.T){
+	t.Log("woot")
+}
+
+//WHY is this map sometimes printing out the nodes in different orders?
+func TestNewTree(t *testing.T){
+	myTree := NewTree()
+	myTree.NewNode("A", "Root", nil)
+	myTree.NewNode("B", "A", nil)
+	myTree.NewNode("C", "A", nil)
+	myTree.NewNode("D", "C", nil)
+	//myTree.NewNode("BB", "B", nil)
+	for k := range myTree.Contents{
+		t.Log(k)
 	}
+}
+//is in tree_tester package, so this should not play with concurrentTree package
+
+
+type (
+
 
 	Walkable interface {
 		NewNode(name, parent string, contents Visitable)
@@ -16,21 +36,23 @@ type (
 	}
 
 	mockTreeNode struct {
-		to   <-chan string
+		to   chan string
 		data string
 	}
 )
 
-func (m *mockTreeNode) Visit(context.Context) (context.Context, error) {
+func (m *mockTreeNode) Visit(cont context.Context) (context.Context, error) {
+	//m.to is supposed to be a receive only type? but we are sending to it?
 	m.to <- m.data
+	//need to return a context? and an error?
+	return cont, nil
 }
 
 func newMockTreeNode(to chan string, data string) *mockTreeNode {
 	return &mockTreeNode{to, data}
 }
 
-func TestWalker(t *testing.T, tree Walkable) {
-
+func TestWalker(t *testing.T) {
 	const (
 		grandfather = "Grandfather"
 		father      = "Father"
@@ -40,12 +62,13 @@ func TestWalker(t *testing.T, tree Walkable) {
 	)
 
 	var (
-		output          = make(chan string)
+		tree = NewTree()
+		output          = make(chan string, 5)
 		grandfatherNode = newMockTreeNode(output, "Grandfather")
 		fatherNode      = newMockTreeNode(output, "Father")
 		motherNode      = newMockTreeNode(output, "Mother")
 		sonNode         = newMockTreeNode(output, "Son")
-		daughter        = newMockTreeNode(output, "Daughter")
+		daughterNode    = newMockTreeNode(output, "Daughter")
 	)
 
 	tree.NewNode(grandfather, "Root", grandfatherNode)
@@ -53,9 +76,10 @@ func TestWalker(t *testing.T, tree Walkable) {
 	tree.NewNode(mother, grandfather, motherNode)
 	tree.NewNode(son, mother, sonNode)
 	tree.NewNode(daughter, mother, daughterNode)
-	close(output)
+	//	close(output)
 
-	go tree.Walk()
+	tree.Walk()
+	close(output)
 
 	checkbox := map[string]bool{
 		grandfather: false,
@@ -92,7 +116,7 @@ func TestWalker(t *testing.T, tree Walkable) {
 		case daughter:
 			if !(checkbox[mother] && checkbox[grandfather]) {
 				t.Fail()
-			}
+			}	
 		}
 	}
 }
