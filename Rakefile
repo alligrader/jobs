@@ -12,7 +12,6 @@ task build_findbugs: [ ] do
     end
 end
 
-
 task all: [ :build ] do
 
 end

@@ -1,35 +1,33 @@
-package concurrentTree
+package jobs
 
-import(
+import (
 	//"fmt"
-	"testing"
 	"context"
+	"testing"
 	//"time"
 	//"log"
 )
 
-func TestPrint(t *testing.T){
+func TestPrint(t *testing.T) {
 	t.Log("woot")
 }
 
 //WHY is this map sometimes printing out the nodes in different orders?
-func TestNewTree(t *testing.T){
+func TestNewTree(t *testing.T) {
 	myTree := NewTree()
 	myTree.NewNode("A", "Root", nil)
 	myTree.NewNode("B", "A", nil)
 	myTree.NewNode("C", "A", nil)
 	myTree.NewNode("D", "C", nil)
 	//myTree.NewNode("BB", "B", nil)
-	for k := range myTree.Contents{
+	for k := range myTree.Contents {
 		t.Log(k)
 	}
 }
+
 //is in tree_tester package, so this should not play with concurrentTree package
 
-
 type (
-
-
 	Walkable interface {
 		NewNode(name, parent string, contents Visitable)
 		Walk()
@@ -62,7 +60,7 @@ func TestWalker(t *testing.T) {
 	)
 
 	var (
-		tree = NewTree()
+		tree            = NewTree()
 		output          = make(chan string, 5)
 		grandfatherNode = newMockTreeNode(output, "Grandfather")
 		fatherNode      = newMockTreeNode(output, "Father")
@@ -116,7 +114,7 @@ func TestWalker(t *testing.T) {
 		case daughter:
 			if !(checkbox[mother] && checkbox[grandfather]) {
 				t.Fail()
-			}	
+			}
 		}
 	}
 }
