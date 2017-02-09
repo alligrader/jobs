@@ -86,8 +86,11 @@ func TestWalker(t *testing.T) {
 		son:         false,
 		daughter:    false,
 	}
+	count := 0
+	expectedCount := len(checkbox)
 
 	for node := range output {
+		count++
 		checkbox[node] = true
 		switch node {
 		case grandfather:
@@ -116,5 +119,9 @@ func TestWalker(t *testing.T) {
 				t.Fail()
 			}
 		}
+	}
+
+	if count != expectedCount {
+		t.Errorf("Count was expected to be %v but was observed to be %v\n", expectedCount, count)
 	}
 }
