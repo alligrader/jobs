@@ -1,11 +1,23 @@
 {
-    "memo": "d52e84985906c5dddf67b8b7dcfe871bd92fcdc2f8fbc4f03870ba15bed081ce",
+    "memo": "112ff0162295cf38f56fb2c6fdd7673589f37fff9db1a22d97ab2d918124b2d8",
     "projects": [
         {
             "name": "github.com/RobbieMcKinstry/pipeline",
             "revision": "0857a967319b431fcd3f263d1abf0664daeecba2",
             "packages": [
                 "."
+            ]
+        },
+        {
+            "name": "github.com/dsnet/compress",
+            "branch": "master",
+            "revision": "b9aab3c6a04eef14c56384b4ad065e7b73438862",
+            "packages": [
+                ".",
+                "bzip2",
+                "bzip2/internal/sais",
+                "internal",
+                "internal/prefix"
             ]
         },
         {
@@ -29,6 +41,33 @@
             "revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe",
             "packages": [
                 "."
+            ]
+        },
+        {
+            "name": "github.com/mholt/archiver",
+            "version": "v2.0",
+            "revision": "cdc68dd1f170b8dfc1a0d2231b5bb0967ed67006",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/nwaples/rardecode",
+            "branch": "master",
+            "revision": "f22b7ef81a0afac9ce1447d37e5ab8e99fbd2f73",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/ulikunitz/xz",
+            "version": "v0.5.3",
+            "revision": "788b87dddaa9905f9c12f778c60468f755aee935",
+            "packages": [
+                ".",
+                "internal/hash",
+                "internal/xlog",
+                "lzma"
             ]
         },
         {
