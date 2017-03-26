@@ -1,1 +1,10 @@
-{}
+{
+    "dependencies": {
+        "github.com/mh-cbon/changelog": {
+            "version": ">=0.0.26, <1.0.0"
+        },
+        "github.com/myntra/pipeline": {
+            "revision": "18794b33da76641ac9c3408f86ab4f09b9ef72bd"
+        }
+    }
+}

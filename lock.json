@@ -1,4 +1,44 @@
 {
-    "memo": "",
-    "projects": []
+    "memo": "b31eeb4a8cceec0e690487c01431f408c4a40ba8a154a67e51c42f880beb5a66",
+    "projects": [
+        {
+            "name": "github.com/fatih/color",
+            "version": "v1.4.1",
+            "revision": "9131ab34cf20d2f6d83fdc67168a5430d1c7dc23",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mattn/go-colorable",
+            "version": "v0.0.7",
+            "revision": "d228849504861217f796da67fae4f6e347643f15",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mattn/go-isatty",
+            "branch": "master",
+            "revision": "57fdcb988a5c543893cc61bce354a6e24ab70022",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/myntra/pipeline",
+            "revision": "18794b33da76641ac9c3408f86ab4f09b9ef72bd",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "golang.org/x/sys",
+            "branch": "master",
+            "revision": "99f16d856c9836c42d24e7ab64ea72916925fa97",
+            "packages": [
+                "unix"
+            ]
+        }
+    ]
 }
