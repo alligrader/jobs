@@ -1,5 +1,5 @@
 {
-    "memo": "112ff0162295cf38f56fb2c6fdd7673589f37fff9db1a22d97ab2d918124b2d8",
+    "memo": "9ba18c39c04e364b841fd21fe90402157754131a45f88b74786cfdf0e58ab614",
     "projects": [
         {
             "name": "github.com/RobbieMcKinstry/pipeline",
@@ -55,6 +55,14 @@
             "name": "github.com/nwaples/rardecode",
             "branch": "master",
             "revision": "f22b7ef81a0afac9ce1447d37e5ab8e99fbd2f73",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/sirupsen/logrus",
+            "version": "v0.11.5",
+            "revision": "ba1b36c82c5e05c4f912a88eab0dcd91a171688f",
             "packages": [
                 "."
             ]

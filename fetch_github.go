@@ -10,9 +10,10 @@ import (
 
 	"github.com/RobbieMcKinstry/pipeline"
 	"github.com/mholt/archiver"
+	log "github.com/sirupsen/logrus"
 )
 
-const defaultArchieveFormat = "tarball"
+const defaultArchieveFormat = "zipball"
 
 // the parameters take the format OWNER, REPO, ARCHIEVE_FORMAT, REF
 const githubURL = "https://api.github.com/repos/%s/%s/%s/%s"
@@ -30,6 +31,7 @@ func NewGithubStep(owner, repo, ref string) pipeline.Step {
 	return &githubFetchStep{
 		owner: owner,
 		repo:  repo,
+		ref:   ref,
 	}
 }
 
@@ -45,6 +47,7 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 	// Generate the URL to ping GitHub
 	url := fmt.Sprintf(githubURL, g.owner, g.repo, defaultArchieveFormat, g.ref)
 	fileUID := fmt.Sprintf("%v-%v-%v", g.owner, g.repo, g.ref)
+	log.Infof("URL: %v", url)
 
 	// Make a POST request to the server (TODO using the installation token in the future)
 	g.Status("Fetching archive from GitHub...")
@@ -56,20 +59,33 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 
 	// Create a temp file to store the file in
 	tmpfile, err := ioutil.TempFile("", fileUID)
-	tmpfileName := filepath.Join(os.TempDir(), fileUID)
 	defer tmpfile.Close()
 	if err != nil {
 		g.Status("Failed to create a temporary file.")
 		return &pipeline.Result{Error: err}
 	}
 
-	// Save the tarball to the filesystem
+	/*
+		stat, err := tmpfile.Stat()
+		if err != nil {
+			g.Status("Failed to read the file stats. Path error!")
+			return &pipeline.Result{Error: err}
+		}
+
+		tmpfileName := stat.Name()
+	*/
+	tmpfileName := tmpfile.Name()
+	log.Infof("Tmpfile name: %v", tmpfileName)
+
+	// Save the zipball to the filesystem
 	_, err = io.Copy(tmpfile, resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
 		g.Status("Failed to save the github archive to the temp file's body")
 		return &pipeline.Result{Error: err}
 	}
+
+	log.Info("Serialized the body into a tmp file")
 
 	// Make the temporary directory
 	dir, err := ioutil.TempDir("", fileUID)
@@ -78,17 +94,46 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 		return &pipeline.Result{Error: err}
 	}
 
+	log.Infof("Tmp directory name: %v", dir)
+
+	log.Info("------------------------")
+	log.Infof("Reading from: %v", tmpfileName)
+	log.Infof("Writing to  : %v", dir)
 	// Break open the archive
-	err = archiver.TarGz.Open(tmpfileName, dir)
+	err = archiver.Zip.Open(tmpfileName, dir)
 	if err != nil {
+		log.Warn(err)
 		g.Status("Failed to unarchive the file")
 		return &pipeline.Result{Error: err}
 	}
 
+	f, err := os.Open(dir)
+	if err != nil {
+		log.Warn(err)
+		g.Status("Failed to open directory")
+		return &pipeline.Result{Error: err}
+	}
+	dirs, err := f.Readdirnames(0)
+	if err != nil {
+		log.Warn(err)
+		g.Status("Failed to read dir names")
+		return &pipeline.Result{Error: err}
+	}
+
+	if len(dirs) != 1 {
+		log.Warn("Expected just a single directory. Instead found %v", len(dirs))
+		g.Status("Rando error")
+		return nil
+	}
+
+	finalPath := filepath.Join(dir, dirs[0])
+
+	log.Info("Finished!")
+	log.Infof("Final Path: %v", finalPath)
 	// Finally, return the result
 	return &pipeline.Result{
 		Error:  nil,
-		KeyVal: map[string]interface{}{"archive": dir},
+		KeyVal: map[string]interface{}{"archive": finalPath},
 	}
 }
 
