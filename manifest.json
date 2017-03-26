@@ -1,10 +1,18 @@
 {
     "dependencies": {
+        "github.com/RobbieMcKinstry/pipeline": {
+            "revision": "0857a967319b431fcd3f263d1abf0664daeecba2"
+        },
+        "github.com/mattn/go-isatty": {
+            "revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe"
+        },
         "github.com/mh-cbon/changelog": {
             "version": ">=0.0.26, <1.0.0"
-        },
-        "github.com/myntra/pipeline": {
-            "revision": "18794b33da76641ac9c3408f86ab4f09b9ef72bd"
+        }
+    },
+    "overrides": {
+        "github.com/mattn/go-isatty": {
+            "revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe"
         }
     }
 }
