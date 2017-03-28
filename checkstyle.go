@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 
@@ -34,8 +35,9 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 	if !ok {
 		return &pipeline.Result{Error: errors.New("Source directory is not a string")}
 	}
+	checkstyle.srcDir = srcDir
 
-	cmd := fb.Cmd()
+	cmd := checkstyle.Cmd()
 	out, err := cmd.Output()
 	if err != nil {
 		return &pipeline.Result{Error: err}
@@ -55,11 +57,11 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 	}
 }
 
-func (fb *findbugsStep) Cmd() *exec.Cmd {
-	cmd := tmplCmdCheckstyle(checkstyleJar, checkPath, checkstyleOut, fb.srcDir)
+func (checkstyle *checkstyleStep) Cmd() *exec.Cmd {
+	cmd := tmplCmdCheckstyle(checkstyleJar, checkPath, checkstyleOut, checkstyle.srcDir)
 	return exec.Command("bash", "-c", cmd)
 }
 
-func tmplCmdCheckstyle(jarPath, checkPath, outputPath, srcPath string) {
+func tmplCmdCheckstyle(jarPath, checkPath, outputPath, srcPath string) string {
 	return fmt.Sprintf(cmdTmplCheckstyle, jarPath, checkPath, outputPath, srcPath)
 }

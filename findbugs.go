@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os/exec"
 
 	"github.com/RobbieMcKinstry/pipeline"
@@ -29,6 +31,7 @@ func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
 	if !ok {
 		return &pipeline.Result{Error: errors.New("Source directory is not a string")}
 	}
+	fb.srcDir = srcDir
 
 	cmd := fb.Cmd()
 	out, err := cmd.Output()
@@ -55,6 +58,6 @@ func (fb *findbugsStep) Cmd() *exec.Cmd {
 	return exec.Command("bash", "-c", cmd)
 }
 
-func tmplCmdFindbugs(jarPath, outputPath, srcPath string) {
+func tmplCmdFindbugs(jarPath, outputPath, srcPath string) string {
 	return fmt.Sprintf(cmdTmplFindBugs, jarPath, outputPath, srcPath)
 }
