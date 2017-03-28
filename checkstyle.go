@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"errors"
+	"io/ioutil"
 	"os/exec"
 
 	"github.com/RobbieMcKinstry/pipeline"
@@ -14,11 +15,12 @@ type checkstyleStep struct {
 
 const (
 	checkstyleJar = "/checkstyle-7.6.1.jar"
-	outputPath    = "/checkstyle_output.txt"
+	checkstyleOut = "/checkstyle_output.txt"
+	checkPath     = "/checks.xml"
 
 	// TODO change this to use checkstyle instead
 	// TODO do i add the text output not to a file but to stdout and store it in the ctx?
-	cmdTmpl = "java -jar checkstyle-7.6.1.jar -c /sun_checks.xml MyClass.java"
+	cmdTmplCheckstyle = "java -jar %s -c %s -o %s %s"
 )
 
 func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Result {
@@ -39,8 +41,13 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 		return &pipeline.Result{Error: err}
 	}
 	stdout := string(out)
+	request.KeyVal["checkpathStdout"] = stdout
 
-	request.KeyVal["findbugs"] = stdout
+	contents, err := ioutil.ReadFile(checkstyleOut)
+	if err != nil {
+		return &pipeline.Result{Error: err}
+	}
+	request.KeyVal["checkstyle"] = string(contents)
 
 	return &pipeline.Result{
 		Error:  nil,
@@ -49,10 +56,10 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 }
 
 func (fb *findbugsStep) Cmd() *exec.Cmd {
-	cmd := tmplCmd(findbugsJar, outputPath, fb.srcDir)
+	cmd := tmplCmdCheckstyle(checkstyleJar, checkPath, checkstyleOut, fb.srcDir)
 	return exec.Command("bash", "-c", cmd)
 }
 
-func tmplCmd(jarPath, outputPath, srcPath string) {
-	return fmt.Sprintf(cmdTmpl, jarPath, outputPath, srcPath)
+func tmplCmdCheckstyle(jarPath, checkPath, outputPath, srcPath string) {
+	return fmt.Sprintf(cmdTmplCheckstyle, jarPath, checkPath, outputPath, srcPath)
 }

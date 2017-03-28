@@ -13,9 +13,9 @@ type findbugsStep struct {
 
 const (
 	findbugsJar = "/findbugs.jar"
-	outputPath  = "/findbugs_output.txt"
+	findbugsOut = "/findbugs_output.txt"
 
-	cmdTmpl = "jar -jar %s -textui -effort:max -output %s %s"
+	cmdTmplFindBugs = "jar -jar %s -textui -effort:max -output %s %s"
 )
 
 func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
@@ -36,8 +36,13 @@ func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
 		return &pipeline.Result{Error: err}
 	}
 	stdout := string(out)
+	contents, err := ioutil.ReadFile(findbugsOut)
+	if err != nil {
+		return &pipeline.Result{Error: err}
+	}
 
-	request.KeyVal["findbugs"] = stdout
+	request.KeyVal["findbugs"] = string(contents)
+	request.KeyVal["findbugsStdout"] = stdout
 
 	return &pipeline.Result{
 		Error:  nil,
@@ -46,10 +51,10 @@ func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
 }
 
 func (fb *findbugsStep) Cmd() *exec.Cmd {
-	cmd := tmplCmd(findbugsJar, outputPath, fb.srcDir)
+	cmd := tmplCmdFindbugs(findbugsJar, findbugsOut, fb.srcDir)
 	return exec.Command("bash", "-c", cmd)
 }
 
-func tmplCmd(jarPath, outputPath, srcPath string) {
-	return fmt.Sprintf(cmdTmpl, jarPath, outputPath, srcPath)
+func tmplCmdFindbugs(jarPath, outputPath, srcPath string) {
+	return fmt.Sprintf(cmdTmplFindBugs, jarPath, outputPath, srcPath)
 }
