@@ -9,55 +9,98 @@ import (
 	"github.com/RobbieMcKinstry/pipeline"
 )
 
-type findbugsStep struct {
-	srcDir string
-}
-
 const (
-	findbugsJar = "/findbugs.jar"
-	findbugsOut = "/findbugs_output.txt"
+	DefaultFindBugsJarLoc    = "/findbugs.jar"
+	DefaultFindBugsOutputLoc = "/findbugs_output.txt"
+	DefaultSrcDir            = "/src"
 
 	cmdTmplFindBugs = "jar -jar %s -textui -effort:max -output %s %s"
 )
 
-func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
+type findbugsStep struct {
+	srcDir    string
+	jarLoc    string
+	outputLoc string
+	pipeline.StepContext
+}
+
+func NewFindbugsStep(jarLoc, outputLoc, srcDir string) pipeline.Step {
+	return &findbugsStep{
+		jarLoc:    jarLoc,
+		outputLoc: outputLoc,
+		srcDir:    srcDir,
+	}
+}
+
+func (fb *findbugsStep) init(request *pipeline.Request) error {
+
+	if err := fb.setSrcDir(request); err != nil {
+		return err
+	}
+
+	if fb.jarLoc == "" {
+		fb.jarLoc = DefaultFindBugsJarLoc
+	}
+	if fb.srcDir == "" {
+		fb.srcDir = DefaultSrcDir
+	}
+	if fb.outputLoc == "" {
+		fb.outputLoc = DefaultFindBugsOutputLoc
+	}
+
+	return nil
+}
+
+func (fb *findbugsStep) setSrcDir(request *pipeline.Request) error {
 
 	srcDirIntf, ok := request.KeyVal["src"]
 	if !ok {
-		return &pipeline.Result{Error: errors.New("No source directory set.")}
+		return errors.New("No source directory set.")
 	}
 
 	srcDir, ok := srcDirIntf.(string)
 	if !ok {
-		return &pipeline.Result{Error: errors.New("Source directory is not a string")}
+		return errors.New("Source directory is not a string")
 	}
 	fb.srcDir = srcDir
+	return nil
+}
+
+func (fb *findbugsStep) launchCmd() (string, error) {
 
 	cmd := fb.Cmd()
-	out, err := cmd.Output()
+	_, err := cmd.Output()
 	if err != nil {
-		return &pipeline.Result{Error: err}
+		return "", err
 	}
-	stdout := string(out)
-	contents, err := ioutil.ReadFile(findbugsOut)
-	if err != nil {
+
+	contents, err := ioutil.ReadFile(fb.outputLoc)
+	return string(contents), err
+}
+
+func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
+
+	// Ensure all data is set
+	if err := fb.init(request); err != nil {
 		return &pipeline.Result{Error: err}
 	}
 
-	request.KeyVal["findbugs"] = string(contents)
-	request.KeyVal["findbugsStdout"] = stdout
+	// Now, launch the command
+	contents, err := fb.launchCmd()
+	request.KeyVal["findbugs"] = contents
 
 	return &pipeline.Result{
-		Error:  nil,
+		Error:  err,
 		KeyVal: request.KeyVal,
 	}
 }
 
-func (fb *findbugsStep) Cmd() *exec.Cmd {
-	cmd := tmplCmdFindbugs(findbugsJar, findbugsOut, fb.srcDir)
-	return exec.Command("bash", "-c", cmd)
+func (fb *findbugsStep) Cancel() error {
+	fb.Status("Cancel")
+	return nil
 }
 
-func tmplCmdFindbugs(jarPath, outputPath, srcPath string) string {
-	return fmt.Sprintf(cmdTmplFindBugs, jarPath, outputPath, srcPath)
+func (fb *findbugsStep) Cmd() *exec.Cmd {
+	cmd := fmt.Sprintf(cmdTmplFindBugs, fb.jarLoc, fb.outputLoc, fb.srcDir)
+	return exec.Command("bash", "-c", cmd)
 }
