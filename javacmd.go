@@ -7,7 +7,6 @@ import (
 	"os/exec"
 
 	"github.com/RobbieMcKinstry/pipeline"
-	log "github.com/sirupsen/logrus"
 )
 
 type (
@@ -16,6 +15,7 @@ type (
 		jarLoc    string
 		outputLoc string
 		checkLoc  string
+		text      bool
 		pipeline.StepContext
 	}
 
@@ -44,9 +44,10 @@ const (
 	DefaultFindBugsOutputLoc   = "/findbugs_output.txt"
 	DefaultSrcDir              = "/src"
 
-	cmdTmplFindBugs     = "java -jar %s -textui -xml:withMessages -effort:max -output %s %s"
-	cmdTmplFindBugsText = "java -jar %s -textui                   -effort:max -output %s %s"
-	cmdTmplCheckstyle   = "java -jar %s -c %s -o %s %s"
+	cmdTmplFindBugs       = "java -jar %s -textui -xml:withMessages -effort:max -output %s %s"
+	cmdTmplFindBugsText   = "java -jar %s -textui                   -effort:max -output %s %s"
+	cmdTmplCheckstyle     = "java -jar %s -c %s -o %s -f xml %s"
+	cmdTmplCheckstyleText = "java -jar %s -c %s -o %s %s"
 )
 
 // This line forces the compiler to check the method
@@ -63,12 +64,13 @@ func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool) pipeline
 	}
 }
 
-func NewCheckstyleStep(srcDir, jarLoc, outputLoc, checkLoc string) pipeline.Step {
+func NewCheckstyleStep(jarLoc, outputLoc, srcDir, checkLoc string, text bool) pipeline.Step {
 	return &checkstyleStep{
 		srcDir:    srcDir,
 		jarLoc:    jarLoc,
 		outputLoc: outputLoc,
 		checkLoc:  checkLoc,
+		text:      text,
 	}
 }
 
@@ -136,6 +138,10 @@ func (fb *findbugsStep) setSrcDir(request *pipeline.Request) error {
 }
 
 func (checkstyle *checkstyleStep) setSrcDir(request *pipeline.Request) error {
+
+	if checkstyle.srcDir != "" {
+		return nil
+	}
 
 	srcDirIntf, ok := request.KeyVal["src"]
 	if !ok {
@@ -223,20 +229,30 @@ func (checkstyle *checkstyleStep) Cancel() error {
 }
 
 func (fb *findbugsStep) Cmd() *exec.Cmd {
-	var cmd string
+	var strTmpl string = cmdTmplFindBugs
+
 	if fb.text {
-		cmd = fmt.Sprintf(cmdTmplFindBugsText, fb.jarLoc, fb.outputLoc, fb.srcDir)
-	} else {
-		cmd = fmt.Sprintf(cmdTmplFindBugs, fb.jarLoc, fb.outputLoc, fb.srcDir)
+		strTmpl = cmdTmplFindBugsText
 	}
-	log.Println(cmd)
+
+	cmd := fmt.Sprintf(
+		strTmpl,
+		fb.jarLoc,
+		fb.outputLoc,
+		fb.srcDir,
+	)
 
 	return exec.Command("bash", "-c", cmd)
 }
 
 func (checkstyle *checkstyleStep) Cmd() *exec.Cmd {
+	var strTmpl = cmdTmplCheckstyle
+
+	if checkstyle.text {
+		strTmpl = cmdTmplCheckstyleText
+	}
 	cmd := fmt.Sprintf(
-		cmdTmplCheckstyle,
+		strTmpl,
 		checkstyle.jarLoc,
 		checkstyle.checkLoc,
 		checkstyle.outputLoc,
