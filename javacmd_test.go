@@ -1,11 +1,13 @@
 package jobs
 
 import (
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
+	"testing"
 
 	"github.com/RobbieMcKinstry/pipeline"
 )
@@ -100,5 +102,17 @@ func ExampleCheckstyle() {
 	// Starting audit...
 	// [WARN] /Users/robbiemckinstry/workspace/go-workspace/src/github.com/alligrader/jobs/.test/src/Main.java:11: 'for' construct must use '{}'s. [NeedBraces]
 	// Audit done.
+}
 
+func TestCanReadSchema(t *testing.T) {
+	contents, err := ioutil.ReadFile("hello.out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bugs BugCollection
+	err = xml.Unmarshal(contents, &bugs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%v", bugs)
 }
