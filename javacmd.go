@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/RobbieMcKinstry/pipeline"
+	log "github.com/sirupsen/logrus"
 )
 
 type (
@@ -22,6 +23,7 @@ type (
 		srcDir    string
 		jarLoc    string
 		outputLoc string
+		text      bool
 		pipeline.StepContext
 	}
 
@@ -42,8 +44,9 @@ const (
 	DefaultFindBugsOutputLoc   = "/findbugs_output.txt"
 	DefaultSrcDir              = "/src"
 
-	cmdTmplFindBugs   = "jar -jar %s -textui -effort:max -output %s %s"
-	cmdTmplCheckstyle = "java -jar %s -c %s -o %s %s"
+	cmdTmplFindBugs     = "java -jar %s -textui -xml:withMessages -effort:max -output %s %s"
+	cmdTmplFindBugsText = "java -jar %s -textui                   -effort:max -output %s %s"
+	cmdTmplCheckstyle   = "java -jar %s -c %s -o %s %s"
 )
 
 // This line forces the compiler to check the method
@@ -51,11 +54,12 @@ const (
 // to ensure that they both fulfill the javacmd interface
 var _, _ javacmd = &findbugsStep{}, &checkstyleStep{}
 
-func NewFindbugsStep(jarLoc, outputLoc, srcDir string) pipeline.Step {
+func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool) pipeline.Step {
 	return &findbugsStep{
 		jarLoc:    jarLoc,
 		outputLoc: outputLoc,
 		srcDir:    srcDir,
+		text:      textoutput,
 	}
 }
 
@@ -113,6 +117,10 @@ func (checkstyle *checkstyleStep) init(request *pipeline.Request) error {
 }
 
 func (fb *findbugsStep) setSrcDir(request *pipeline.Request) error {
+
+	if fb.srcDir != "" {
+		return nil
+	}
 
 	srcDirIntf, ok := request.KeyVal["src"]
 	if !ok {
@@ -175,11 +183,13 @@ func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
 
 	// Now, launch the command
 	contents, err := fb.launchCmd()
-	request.KeyVal["findbugs"] = contents
+
+	nextMap := fromMap(request.KeyVal)
+	nextMap["findbugs"] = contents
 
 	return &pipeline.Result{
 		Error:  err,
-		KeyVal: request.KeyVal,
+		KeyVal: nextMap,
 	}
 }
 
@@ -192,11 +202,13 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 
 	// Now, launch the command
 	contents, err := checkstyle.launchCmd()
-	request.KeyVal["checkstyle"] = contents
+
+	nextMap := fromMap(request.KeyVal)
+	nextMap["checkstyle"] = contents
 
 	return &pipeline.Result{
 		Error:  err,
-		KeyVal: request.KeyVal,
+		KeyVal: nextMap,
 	}
 }
 
@@ -211,7 +223,14 @@ func (checkstyle *checkstyleStep) Cancel() error {
 }
 
 func (fb *findbugsStep) Cmd() *exec.Cmd {
-	cmd := fmt.Sprintf(cmdTmplFindBugs, fb.jarLoc, fb.outputLoc, fb.srcDir)
+	var cmd string
+	if fb.text {
+		cmd = fmt.Sprintf(cmdTmplFindBugsText, fb.jarLoc, fb.outputLoc, fb.srcDir)
+	} else {
+		cmd = fmt.Sprintf(cmdTmplFindBugs, fb.jarLoc, fb.outputLoc, fb.srcDir)
+	}
+	log.Println(cmd)
+
 	return exec.Command("bash", "-c", cmd)
 }
 
@@ -225,4 +244,15 @@ func (checkstyle *checkstyleStep) Cmd() *exec.Cmd {
 	)
 
 	return exec.Command("bash", "-c", cmd)
+}
+
+func fromMap(m map[string]interface{}) map[string]interface{} {
+	result := map[string]interface{}{}
+	if m == nil {
+		return result
+	}
+	for key, val := range m {
+		result[key] = val
+	}
+	return result
 }
