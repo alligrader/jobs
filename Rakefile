@@ -8,7 +8,7 @@ task build_findbugs: [ ] do
         Rake::Task["build_findbugs"].reenable
         Rake::Task["build_findbugs"].invoke
     else
-        sh "docker build -t thesnowmancometh/findbugs:#{input} -f findbugs/Findbugs_Dockerfile findbugs"
+        sh "docker build -t thesnowmancometh/findbugs:#{input} -f Findbugs_Dockerfile ."
     end
 end
 

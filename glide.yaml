@@ -1,5 +1,0 @@
-package: github.com/alligrader/jobs
-import:
-- package: github.com/twmb/algoimpl
-  subpackages:
-  - go/graph

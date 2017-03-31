@@ -1,0 +1,13 @@
+FROM openjdk:8-jre-alpine
+
+LABEL AUTHOR="RobbieMcKinstry" 
+LABEL VERSION="v0.0.2"
+LABEL FINDBUGS_VERSION="v3.0.1"
+LABEL CHECKSTYLE_VERSION="v7.6.1"
+
+
+ENV SRC_DIR /opt/src
+ADD lib/findbugs-3.0.1/lib/findbugs.jar /findbugs.jar
+ADD lib/checkstyle-7.6.1-all.jar /checkstyle.jar
+ADD lib/default_checkstyle_cfgs/google.xml checks.xml
+CMD ["jar", "-jar", "/findbugs", "-textui", "-effort:max", "$SRC_DIR"]
