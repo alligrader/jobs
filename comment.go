@@ -1,11 +1,15 @@
 package jobs
 
 import (
+	"context"
 	"encoding/xml"
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/RobbieMcKinstry/pipeline"
+	"github.com/google/go-github/github"
+	log "github.com/sirupsen/logrus"
 )
 
 // POST /repos/:owner/:repo/commits/:sha/comments
@@ -62,8 +66,77 @@ func (c *commentStep) loadFindbugs(req *pipeline.Request) error {
 	return err
 }
 
+func (c *commentStep) logReports() {
+	c.logFindbugsReport()
+	c.logCheckstyleReport()
+}
+
+func (c *commentStep) logFindbugsReport() {
+
+	output, err := xml.MarshalIndent(c.findbugsReport, "  ", "    ")
+	if err != nil {
+		log.Fatalf("error: %v\n", err)
+	}
+
+	log.Info(string(output))
+}
+
+func (c *commentStep) logCheckstyleReport() {
+
+	output, err := xml.MarshalIndent(c.checkstyleReport, "  ", "    ")
+	if err != nil {
+		log.Fatalf("error: %v\n", err)
+	}
+
+	log.Info(string(output))
+}
+
+func (c *commentStep) SendComment(ctx context.Context, client *github.Client, comment *github.RepositoryComment) error {
+
+	repoService := client.Repositories
+	_, _, err := repoService.CreateComment(ctx, c.owner, c.repo, c.sha, comment)
+
+	return err
+}
+
 func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 	c.init(req)
+
+	c.logReports()
+
+	ctx := context.Background()
+	client := github.NewClient(nil)
+
+	for _, f := range c.checkstyleReport.File {
+		for _, checkError := range f.Error {
+
+			position, _ := strconv.Atoi(checkError.Line)
+			comment := &github.RepositoryComment{
+				Body:     &checkError.Message,
+				Path:     &f.Name,
+				Position: &position,
+			}
+			err := c.SendComment(ctx, client, comment)
+			if err != nil {
+				return &pipeline.Result{Error: err}
+			}
+		}
+	}
+
+	/*  THIS CODE IS... MAYBE WEIRD
+	for _, bug := range c.findbugsReport {
+		comment := &github.RepositoryComment{
+			Body:     bug.Abbrev,
+			Path:     bug.SourceLineBugInstance.Sourcefile,
+			Position: strings.Atoi(bug.SourceLineBugInstance.Sourcepath),
+		}
+		resp, err := repoService.CreateComment(ctx, c.owner, c.repo, c.sha, comment)
+		if err != nil {
+			return &pipeline.Result{Error: err}
+		}
+		log.Warn(string(resp.Body))
+	}
+	*/
 	// POST to GitHub the comments
 	// https://godoc.org/github.com/google/go-github/github#RepositoriesService.CreateComment
 	// https://gocodecloud.com/blog/2016/08/13/receiving-and-processing-github-api-events/

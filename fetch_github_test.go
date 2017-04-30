@@ -1,11 +1,15 @@
 package jobs
 
 import (
+	"context"
+	"golang.org/x/oauth2"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/RobbieMcKinstry/pipeline"
+	"github.com/google/go-github/github"
 )
 
 func TestGitHubFetch(t *testing.T) {
@@ -45,4 +49,39 @@ func TestGitHubFetch(t *testing.T) {
 	if _, err := os.Stat(nestedFile); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestCommentStep(t *testing.T) {
+	const owner, repo, sha string = "alligrader", "TestRepo", "d6a5d32f84e346574aded51404010d4ad2817641"
+
+	httpclient := getClient()
+
+	var body, path = "Successful comment!", "README.md"
+	var position = 1
+	comment := &github.RepositoryComment{
+		Body:     &body,
+		Path:     &path,
+		Position: &position,
+	}
+	commentStep := &commentStep{
+		owner: owner,
+		repo:  repo,
+		sha:   sha,
+	}
+	ctx := context.Background()
+	client := github.NewClient(httpclient)
+
+	err := commentStep.SendComment(ctx, client, comment)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func getClient() *http.Client {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: "e34530fcc3f86f0811a525f37e2300a78991870b"},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	return tc
 }

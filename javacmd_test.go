@@ -114,7 +114,6 @@ func TestCanReadSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%v", bugs)
 }
 
 func TestCanReadSchema2(t *testing.T) {
@@ -127,5 +126,4 @@ func TestCanReadSchema2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%v", style)
 }

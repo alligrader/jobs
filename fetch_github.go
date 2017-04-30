@@ -47,7 +47,6 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 	// Generate the URL to ping GitHub
 	url := fmt.Sprintf(githubURL, g.owner, g.repo, defaultArchieveFormat, g.ref)
 	fileUID := fmt.Sprintf("%v-%v-%v", g.owner, g.repo, g.ref)
-	log.Infof("URL: %v", url)
 
 	// Make a POST request to the server (TODO using the installation token in the future)
 	g.Status("Fetching archive from GitHub...")
@@ -75,7 +74,6 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 		tmpfileName := stat.Name()
 	*/
 	tmpfileName := tmpfile.Name()
-	log.Infof("Tmpfile name: %v", tmpfileName)
 
 	// Save the zipball to the filesystem
 	_, err = io.Copy(tmpfile, resp.Body)
@@ -85,8 +83,6 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 		return &pipeline.Result{Error: err}
 	}
 
-	log.Info("Serialized the body into a tmp file")
-
 	// Make the temporary directory
 	dir, err := ioutil.TempDir("", fileUID)
 	if err != nil {
@@ -94,11 +90,6 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 		return &pipeline.Result{Error: err}
 	}
 
-	log.Infof("Tmp directory name: %v", dir)
-
-	log.Info("------------------------")
-	log.Infof("Reading from: %v", tmpfileName)
-	log.Infof("Writing to  : %v", dir)
 	// Break open the archive
 	err = archiver.Zip.Open(tmpfileName, dir)
 	if err != nil {
@@ -128,8 +119,6 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 
 	finalPath := filepath.Join(dir, dirs[0])
 
-	log.Info("Finished!")
-	log.Infof("Final Path: %v", finalPath)
 	// Finally, return the result
 	return &pipeline.Result{
 		Error:  nil,
