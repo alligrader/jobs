@@ -105,7 +105,7 @@ func ExampleCheckstyle() {
 }
 
 func TestCanReadSchema(t *testing.T) {
-	contents, err := ioutil.ReadFile("hello.out")
+	contents, err := ioutil.ReadFile(".test/findbugs.out")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,5 +114,16 @@ func TestCanReadSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%v", bugs)
+}
+
+func TestCanReadSchema2(t *testing.T) {
+	contents, err := ioutil.ReadFile(".test/checkstyle.out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var style Checkstyle
+	err = xml.Unmarshal(contents, &style)
+	if err != nil {
+		t.Fatal(err)
+	}
 }

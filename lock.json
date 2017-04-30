@@ -1,9 +1,10 @@
 {
-    "memo": "9ba18c39c04e364b841fd21fe90402157754131a45f88b74786cfdf0e58ab614",
+    "memo": "1821d81750699b20e25a2a97fdccc9951dfd42673b87a4b34ab877c67d10daa8",
     "projects": [
         {
             "name": "github.com/RobbieMcKinstry/pipeline",
-            "revision": "0857a967319b431fcd3f263d1abf0664daeecba2",
+            "branch": "master",
+            "revision": "dd2f1fe37160138960632ab1fe68f31494d4a08e",
             "packages": [
                 "."
             ]
@@ -26,6 +27,30 @@
             "revision": "9131ab34cf20d2f6d83fdc67168a5430d1c7dc23",
             "packages": [
                 "."
+            ]
+        },
+        {
+            "name": "github.com/golang/protobuf",
+            "branch": "master",
+            "revision": "18c9bb3261723cd5401db4d0c9fbc5c3b6c70fe8",
+            "packages": [
+                "proto"
+            ]
+        },
+        {
+            "name": "github.com/google/go-github",
+            "branch": "master",
+            "revision": "e8d46665e050742f457a58088b1e6b794b2ae966",
+            "packages": [
+                "github"
+            ]
+        },
+        {
+            "name": "github.com/google/go-querystring",
+            "branch": "master",
+            "revision": "53e6ce116135b80d037921a7fdd5138cf32d7a8a",
+            "packages": [
+                "query"
             ]
         },
         {
@@ -79,11 +104,45 @@
             ]
         },
         {
+            "name": "golang.org/x/net",
+            "branch": "master",
+            "revision": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344",
+            "packages": [
+                "context"
+            ]
+        },
+        {
+            "name": "golang.org/x/oauth2",
+            "branch": "master",
+            "revision": "a6bd8cefa1811bd24b86f8902872e4e8225f74c4",
+            "packages": [
+                ".",
+                "internal"
+            ]
+        },
+        {
             "name": "golang.org/x/sys",
             "branch": "master",
             "revision": "afadfcc7779c1f4db0f6f6438afcb108d9c9c7cd",
             "packages": [
                 "unix"
+            ]
+        },
+        {
+            "name": "google.golang.org/appengine",
+            "version": "v1.0.0",
+            "revision": "150dc57a1b433e64154302bdc40b6bb8aefa313a",
+            "packages": [
+                ".",
+                "internal",
+                "internal/app_identity",
+                "internal/base",
+                "internal/datastore",
+                "internal/log",
+                "internal/modules",
+                "internal/remote_api",
+                "internal/urlfetch",
+                "urlfetch"
             ]
         }
     ]
