@@ -1,8 +1,5 @@
 {
     "dependencies": {
-        "github.com/RobbieMcKinstry/pipeline": {
-            "revision": "0857a967319b431fcd3f263d1abf0664daeecba2"
-        },
         "github.com/mattn/go-isatty": {
             "revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe"
         },
