@@ -23,6 +23,7 @@ type commentStep struct {
 }
 
 func NewCommentStep(owner, repo, sha string) pipeline.Step {
+	log.Warn("Creating a new comment.")
 	return &commentStep{
 		owner: owner,
 		repo:  repo,
@@ -100,6 +101,7 @@ func (c *commentStep) SendComment(ctx context.Context, client *github.Client, co
 }
 
 func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
+	log.Warn("Beginning to exec the comment phase.")
 	c.init(req)
 
 	c.logReports()
@@ -107,7 +109,9 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 	ctx := context.Background()
 	client := github.NewClient(nil)
 
+	log.Warnf("There are %v files.", len(c.checkstyleReport.File))
 	for _, f := range c.checkstyleReport.File {
+		log.Warnf("There are %v violations in this file.", len(f.Error))
 		for _, checkError := range f.Error {
 
 			position, _ := strconv.Atoi(checkError.Line)
@@ -116,12 +120,15 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 				Path:     &f.Name,
 				Position: &position,
 			}
+			log.Warnf("Body of comment: %v", checkError.Message)
 			err := c.SendComment(ctx, client, comment)
 			if err != nil {
 				return &pipeline.Result{Error: err}
 			}
+			log.Warn("Comment sent successfully")
 		}
 	}
+	log.Warn("Finished commenting.")
 
 	/*  THIS CODE IS... MAYBE WEIRD
 	for _, bug := range c.findbugsReport {

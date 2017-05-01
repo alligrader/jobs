@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/RobbieMcKinstry/pipeline"
+	log "github.com/sirupsen/logrus"
 )
 
 type (
@@ -124,7 +125,7 @@ func (fb *findbugsStep) setSrcDir(request *pipeline.Request) error {
 		return nil
 	}
 
-	srcDirIntf, ok := request.KeyVal["src"]
+	srcDirIntf, ok := request.KeyVal["archive"]
 	if !ok {
 		return errors.New("No source directory set.")
 	}
@@ -143,7 +144,7 @@ func (checkstyle *checkstyleStep) setSrcDir(request *pipeline.Request) error {
 		return nil
 	}
 
-	srcDirIntf, ok := request.KeyVal["src"]
+	srcDirIntf, ok := request.KeyVal["archive"]
 	if !ok {
 		return errors.New("No source directory set.")
 	}
@@ -171,8 +172,27 @@ func (fb *findbugsStep) launchCmd() (string, error) {
 func (checkstyle *checkstyleStep) launchCmd() (string, error) {
 
 	cmd := checkstyle.Cmd()
-	_, err := cmd.Output()
+	stderr, err := cmd.StdoutPipe()
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err = cmd.Start(); err != nil {
+		log.Fatal(err)
+	}
+	if err = cmd.Wait(); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Debug("Program has finished running")
+	if err != nil {
+		log.Debug("Error is not nil")
+		errorMessage, err := ioutil.ReadAll(stderr)
+		if err != nil {
+			log.Warn("Failing to correctly marshal the error!")
+			log.Fatal(err)
+		}
+		log.Debug("Logging the result string")
+		log.Warn(string(errorMessage))
 		return "", err
 	}
 
