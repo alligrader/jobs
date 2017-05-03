@@ -1,10 +1,14 @@
 package jobs
 
 import (
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/RobbieMcKinstry/pipeline"
 	log "github.com/sirupsen/logrus"
@@ -16,6 +20,7 @@ type (
 		jarLoc    string
 		outputLoc string
 		checkLoc  string
+		repoBase  string
 		text      bool
 		pipeline.StepContext
 	}
@@ -65,12 +70,13 @@ func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool) pipeline
 	}
 }
 
-func NewCheckstyleStep(jarLoc, outputLoc, srcDir, checkLoc string, text bool) pipeline.Step {
+func NewCheckstyleStep(jarLoc, outputLoc, srcDir, checkLoc, repoBase string, text bool) pipeline.Step {
 	return &checkstyleStep{
 		srcDir:    srcDir,
 		jarLoc:    jarLoc,
 		outputLoc: outputLoc,
 		checkLoc:  checkLoc,
+		repoBase:  repoBase,
 		text:      text,
 	}
 }
@@ -106,6 +112,11 @@ func (checkstyle *checkstyleStep) init(request *pipeline.Request) error {
 
 	if checkstyle.srcDir == "" {
 		checkstyle.srcDir = DefaultSrcDir
+	}
+
+	// Populate checkstyle.srcDir before populating repoBase instance variable
+	if checkstyle.repoBase == "" {
+		checkstyle.repoBase = checkstyle.srcDir
 	}
 
 	if checkstyle.outputLoc == "" {
@@ -154,6 +165,7 @@ func (checkstyle *checkstyleStep) setSrcDir(request *pipeline.Request) error {
 		return errors.New("Source directory is not a string")
 	}
 	checkstyle.srcDir = srcDir
+	log.Infof("Setting source directory to %v", srcDir)
 	return nil
 }
 
@@ -183,21 +195,37 @@ func (checkstyle *checkstyleStep) launchCmd() (string, error) {
 		log.Fatal(err)
 	}
 
-	log.Debug("Program has finished running")
+	log.Info("Program has finished running")
 	if err != nil {
-		log.Debug("Error is not nil")
+		log.Info("Error is not nil")
 		errorMessage, err := ioutil.ReadAll(stderr)
 		if err != nil {
 			log.Warn("Failing to correctly marshal the error!")
 			log.Fatal(err)
 		}
-		log.Debug("Logging the result string")
+		log.Info("Logging the result string")
 		log.Warn(string(errorMessage))
 		return "", err
 	}
 
+	checkstyle.listFiles()
 	contents, err := ioutil.ReadFile(checkstyle.outputLoc)
+	log.Infof("Logging output of file: %v", string(contents))
 	return string(contents), err
+}
+
+// TODO delete, only used for debugging purposes.
+func (checkstyle *checkstyleStep) listFiles() {
+	files, err := ioutil.ReadDir(checkstyle.srcDir)
+	if err != nil {
+		log.Fatalf("Error while listing directory: %v", err)
+	}
+
+	str := ""
+	for _, f := range files {
+		str += f.Name() + "\n"
+	}
+	log.Info("Files:\n%v", str)
 }
 
 func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
@@ -209,7 +237,6 @@ func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
 
 	// Now, launch the command
 	contents, err := fb.launchCmd()
-
 	nextMap := fromMap(request.KeyVal)
 	nextMap["findbugs"] = contents
 
@@ -228,14 +255,64 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 
 	// Now, launch the command
 	contents, err := checkstyle.launchCmd()
+	if err != nil {
+		return &pipeline.Result{Error: err}
+	}
+
+	// Serialize the command resuls into a struct
+	// TODO this should be done by piping STDOUT into a
+	// XMLDecoder, NOT by writing out to a file and then reading that file back in.
+	// It's WAY less effecient to write to disk, read from disk into memory, and then decode
+	// First, I need to refactor "launchCmd" to be cleaner before I can do that, though.
+	ck, err := checkstyle.serialize(contents)
+	// TODO next, we need to filter out the file paths into something useful
+	// We can't use the absolute path because that contains the temporary directory as a base
+	// Iterate through all of the files and cut out the base path.
+	ck = checkstyle.filterPath(ck)
 
 	nextMap := fromMap(request.KeyVal)
-	nextMap["checkstyle"] = contents
+	nextMap["checkstyle"] = ck
 
 	return &pipeline.Result{
 		Error:  err,
 		KeyVal: nextMap,
 	}
+}
+
+// filterPath walks through each file and removes the base of the path
+// from the File.Name property. This is a transformation which makes it possible to
+// post-back comments to GitHub. GitHub only know the path from the base
+// of the directory, not the absolute path on the machine's filesystem.
+func (checkstyle *checkstyleStep) filterPath(ch *Checkstyle) *Checkstyle {
+	log.Info("Filtering the file paths...")
+	for index, f := range ch.File {
+		base, err := filepath.Abs(checkstyle.repoBase)
+		if err != nil {
+			log.Fatal(err)
+		}
+		regexDescriptor := fmt.Sprintf("^%s", base)
+		r := regexp.MustCompile(regexDescriptor)
+		fileName := f.Name
+		if loc := r.FindStringIndex(fileName); loc != nil {
+			log.Info("Found a match in the filename.")
+			start := loc[1] + 1
+			ch.File[index].Name = fileName[start:]
+			log.Warnf("Locations are: (%v, %v)", loc[0], loc[1])
+			log.Infof("File name is now %v\n and file.Name is now %v", ch.File[index].Name, f.Name)
+		} else {
+			log.Warnf("Found a match in the filename.\nRegex Descriptor: '%s', filename: %s", regexDescriptor, fileName)
+		}
+	}
+	return ch
+}
+
+func (checkstyle *checkstyleStep) serialize(blob string) (*Checkstyle, error) {
+	var (
+		check   Checkstyle
+		decoder = xml.NewDecoder(strings.NewReader(blob))
+		err     = decoder.Decode(&check)
+	)
+	return &check, err
 }
 
 func (fb *findbugsStep) Cancel() error {

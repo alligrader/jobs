@@ -17,17 +17,19 @@ const githubCommentURL = "https://api.github.com/repos/%s/%s/commits/%s/comments
 
 type commentStep struct {
 	owner, repo, sha string
+	client           *github.Client
 	checkstyleReport *Checkstyle
 	findbugsReport   *BugCollection
 	pipeline.StepContext
 }
 
-func NewCommentStep(owner, repo, sha string) pipeline.Step {
-	log.Warn("Creating a new comment.")
+func NewCommentStep(owner, repo, sha string, client *github.Client) pipeline.Step {
+	log.Warnf("Creating a new comment with ref %v", sha)
 	return &commentStep{
-		owner: owner,
-		repo:  repo,
-		sha:   sha,
+		owner:  owner,
+		repo:   repo,
+		sha:    sha,
+		client: client,
 	}
 }
 
@@ -95,6 +97,12 @@ func (c *commentStep) logCheckstyleReport() {
 func (c *commentStep) SendComment(ctx context.Context, client *github.Client, comment *github.RepositoryComment) error {
 
 	repoService := client.Repositories
+	if c.sha == "" {
+		log.Warn("SHA IS EMPTY")
+	} else {
+		log.Infof("SHA is %v", c.sha)
+	}
+
 	_, _, err := repoService.CreateComment(ctx, c.owner, c.repo, c.sha, comment)
 
 	return err
@@ -107,7 +115,7 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 	c.logReports()
 
 	ctx := context.Background()
-	client := github.NewClient(nil)
+	client := c.client
 
 	log.Warnf("There are %v files.", len(c.checkstyleReport.File))
 	for _, f := range c.checkstyleReport.File {
@@ -121,6 +129,8 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 				Position: &position,
 			}
 			log.Warnf("Body of comment: %v", checkError.Message)
+			log.Warnf("Position of comment: %v", position)
+			log.Warnf("Path of comment: %v", f.Name)
 			err := c.SendComment(ctx, client, comment)
 			if err != nil {
 				return &pipeline.Result{Error: err}
@@ -153,12 +163,17 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 func (c *commentStep) init(req *pipeline.Request) error {
 	var err error
 
-	if err = c.loadCheckstyle(req); err != nil {
+	check, err := extractCheckstyle(req.KeyVal, "checkstyle")
+	if err != nil {
 		return err
 	}
-	if err = c.loadFindbugs(req); err != nil {
-		return err
-	}
+	c.checkstyleReport = check
+	//if err = c.loadCheckstyle(req); err != nil {
+	//	return err
+	//}
+	//if err = c.loadFindbugs(req); err != nil {
+	//	return err
+	//}
 
 	if c.owner == "" {
 		c.owner, err = extractStr(req.KeyVal, "OWNER")
@@ -203,4 +218,23 @@ func extractStr(keyval map[string]interface{}, key string) (string, error) {
 	}
 
 	return str, nil
+}
+
+func extractCheckstyle(keyval map[string]interface{}, key string) (*Checkstyle, error) {
+	if keyval == nil {
+		return nil, errors.New("KeyVal was nil.")
+	}
+
+	val, ok := keyval[key]
+	if !ok {
+		return nil, errors.New("Not such key...")
+	}
+
+	ch, ok := val.(*Checkstyle)
+	if !ok {
+		return nil, errors.New("Value at key " + key + " is not type(*Checkstyle)")
+	}
+
+	return ch, nil
+
 }

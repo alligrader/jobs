@@ -63,13 +63,14 @@ func TestCommentStep(t *testing.T) {
 		Path:     &path,
 		Position: &position,
 	}
+	client := github.NewClient(httpclient)
 	commentStep := &commentStep{
-		owner: owner,
-		repo:  repo,
-		sha:   sha,
+		owner:  owner,
+		repo:   repo,
+		sha:    sha,
+		client: client,
 	}
 	ctx := context.Background()
-	client := github.NewClient(httpclient)
 
 	err := commentStep.SendComment(ctx, client, comment)
 	if err != nil {
@@ -80,7 +81,7 @@ func TestCommentStep(t *testing.T) {
 func getClient() *http.Client {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: "e34530fcc3f86f0811a525f37e2300a78991870b"},
+		&oauth2.Token{AccessToken: "8f23d9e3b9cc22d3be326928ee73c4880996de65"},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	return tc
