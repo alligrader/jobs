@@ -9,7 +9,7 @@ import (
 
 	"github.com/RobbieMcKinstry/pipeline"
 	"github.com/google/go-github/github"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // POST /repos/:owner/:repo/commits/:sha/comments
@@ -20,16 +20,18 @@ type commentStep struct {
 	client           *github.Client
 	checkstyleReport *Checkstyle
 	findbugsReport   *BugCollection
+	log              *logrus.Logger
 	pipeline.StepContext
 }
 
-func NewCommentStep(owner, repo, sha string, client *github.Client) pipeline.Step {
-	log.Warnf("Creating a new comment with ref %v", sha)
+func NewCommentStep(owner, repo, sha string, client *github.Client, logger *logrus.Logger) pipeline.Step {
+	logger.Warnf("Creating a new comment with ref %v", sha)
 	return &commentStep{
 		owner:  owner,
 		repo:   repo,
 		sha:    sha,
 		client: client,
+		log:    logger,
 	}
 }
 
@@ -78,29 +80,29 @@ func (c *commentStep) logFindbugsReport() {
 
 	output, err := xml.MarshalIndent(c.findbugsReport, "  ", "    ")
 	if err != nil {
-		log.Fatalf("error: %v\n", err)
+		c.log.Fatalf("error: %v\n", err)
 	}
 
-	log.Info(string(output))
+	c.log.Info(string(output))
 }
 
 func (c *commentStep) logCheckstyleReport() {
 
 	output, err := xml.MarshalIndent(c.checkstyleReport, "  ", "    ")
 	if err != nil {
-		log.Fatalf("error: %v\n", err)
+		c.log.Fatalf("error: %v\n", err)
 	}
 
-	log.Info(string(output))
+	c.log.Info(string(output))
 }
 
 func (c *commentStep) SendComment(ctx context.Context, client *github.Client, comment *github.RepositoryComment) error {
 
 	repoService := client.Repositories
 	if c.sha == "" {
-		log.Warn("SHA IS EMPTY")
+		c.log.Warn("SHA IS EMPTY")
 	} else {
-		log.Infof("SHA is %v", c.sha)
+		c.log.Infof("SHA is %v", c.sha)
 	}
 
 	_, _, err := repoService.CreateComment(ctx, c.owner, c.repo, c.sha, comment)
@@ -109,7 +111,7 @@ func (c *commentStep) SendComment(ctx context.Context, client *github.Client, co
 }
 
 func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
-	log.Warn("Beginning to exec the comment phase.")
+	c.log.Warn("Beginning to exec the comment phase.")
 	c.init(req)
 
 	c.logReports()
@@ -117,9 +119,9 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 	ctx := context.Background()
 	client := c.client
 
-	log.Warnf("There are %v files.", len(c.checkstyleReport.File))
+	c.log.Warnf("There are %v files.", len(c.checkstyleReport.File))
 	for _, f := range c.checkstyleReport.File {
-		log.Warnf("There are %v violations in this file.", len(f.Error))
+		c.log.Warnf("There are %v violations in this file.", len(f.Error))
 		for _, checkError := range f.Error {
 
 			position, _ := strconv.Atoi(checkError.Line)
@@ -128,17 +130,17 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 				Path:     &f.Name,
 				Position: &position,
 			}
-			log.Warnf("Body of comment: %v", checkError.Message)
-			log.Warnf("Position of comment: %v", position)
-			log.Warnf("Path of comment: %v", f.Name)
+			c.log.Warnf("Body of comment: %v", checkError.Message)
+			c.log.Warnf("Position of comment: %v", position)
+			c.log.Warnf("Path of comment: %v", f.Name)
 			err := c.SendComment(ctx, client, comment)
 			if err != nil {
 				return &pipeline.Result{Error: err}
 			}
-			log.Warn("Comment sent successfully")
+			c.log.Warn("Comment sent successfully")
 		}
 	}
-	log.Warn("Finished commenting.")
+	c.log.Warn("Finished commenting.")
 
 	/*  THIS CODE IS... MAYBE WEIRD
 	for _, bug := range c.findbugsReport {

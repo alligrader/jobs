@@ -10,7 +10,7 @@ import (
 
 	"github.com/RobbieMcKinstry/pipeline"
 	"github.com/mholt/archiver"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultArchieveFormat = "zipball"
@@ -24,21 +24,23 @@ type githubFetchStep struct {
 	owner string
 	repo  string
 	ref   string
+	log   *logrus.Logger
 	pipeline.StepContext
 }
 
-func NewGithubStep(owner, repo, ref string) pipeline.Step {
+func NewGithubStep(owner, repo, ref string, logger *logrus.Logger) pipeline.Step {
 	return &githubFetchStep{
 		owner: owner,
 		repo:  repo,
 		ref:   ref,
+		log:   logger,
 	}
 }
 
 // NewGithubStepFromEnvironment reads the owner, repo, and ref from the OWNER, REPO, and REF
 // environment variables.
 func NewGithubStepFromEnvironment() pipeline.Step {
-	return NewGithubStep(os.Getenv("OWNER"), os.Getenv("REPO"), os.Getenv("REF"))
+	return NewGithubStep(os.Getenv("OWNER"), os.Getenv("REPO"), os.Getenv("REF"), nil)
 }
 
 func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
@@ -93,26 +95,26 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 	// Break open the archive
 	err = archiver.Zip.Open(tmpfileName, dir)
 	if err != nil {
-		log.Warn(err)
+		g.log.Warn(err)
 		g.Status("Failed to unarchive the file")
 		return &pipeline.Result{Error: err}
 	}
 
 	f, err := os.Open(dir)
 	if err != nil {
-		log.Warn(err)
+		g.log.Warn(err)
 		g.Status("Failed to open directory")
 		return &pipeline.Result{Error: err}
 	}
 	dirs, err := f.Readdirnames(0)
 	if err != nil {
-		log.Warn(err)
+		g.log.Warn(err)
 		g.Status("Failed to read dir names")
 		return &pipeline.Result{Error: err}
 	}
 
 	if len(dirs) != 1 {
-		log.Warn("Expected just a single directory. Instead found %v", len(dirs))
+		g.log.Warn("Expected just a single directory. Instead found %v", len(dirs))
 		g.Status("Rando error")
 		return nil
 	}

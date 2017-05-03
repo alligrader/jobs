@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/RobbieMcKinstry/pipeline"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type (
@@ -22,6 +22,7 @@ type (
 		checkLoc  string
 		repoBase  string
 		text      bool
+		log       *logrus.Logger
 		pipeline.StepContext
 	}
 
@@ -30,6 +31,7 @@ type (
 		jarLoc    string
 		outputLoc string
 		text      bool
+		log       *logrus.Logger
 		pipeline.StepContext
 	}
 
@@ -61,16 +63,17 @@ const (
 // to ensure that they both fulfill the javacmd interface
 var _, _ javacmd = &findbugsStep{}, &checkstyleStep{}
 
-func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool) pipeline.Step {
+func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool, logger *logrus.Logger) pipeline.Step {
 	return &findbugsStep{
 		jarLoc:    jarLoc,
 		outputLoc: outputLoc,
 		srcDir:    srcDir,
 		text:      textoutput,
+		log:       logger,
 	}
 }
 
-func NewCheckstyleStep(jarLoc, outputLoc, srcDir, checkLoc, repoBase string, text bool) pipeline.Step {
+func NewCheckstyleStep(jarLoc, outputLoc, srcDir, checkLoc, repoBase string, text bool, logger *logrus.Logger) pipeline.Step {
 	return &checkstyleStep{
 		srcDir:    srcDir,
 		jarLoc:    jarLoc,
@@ -78,6 +81,7 @@ func NewCheckstyleStep(jarLoc, outputLoc, srcDir, checkLoc, repoBase string, tex
 		checkLoc:  checkLoc,
 		repoBase:  repoBase,
 		text:      text,
+		log:       logger,
 	}
 }
 
@@ -165,7 +169,7 @@ func (checkstyle *checkstyleStep) setSrcDir(request *pipeline.Request) error {
 		return errors.New("Source directory is not a string")
 	}
 	checkstyle.srcDir = srcDir
-	log.Infof("Setting source directory to %v", srcDir)
+	checkstyle.log.Infof("Setting source directory to %v", srcDir)
 	return nil
 }
 
@@ -186,31 +190,31 @@ func (checkstyle *checkstyleStep) launchCmd() (string, error) {
 	cmd := checkstyle.Cmd()
 	stderr, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Fatal(err)
+		checkstyle.log.Fatal(err)
 	}
 	if err = cmd.Start(); err != nil {
-		log.Fatal(err)
+		checkstyle.log.Fatal(err)
 	}
 	if err = cmd.Wait(); err != nil {
-		log.Fatal(err)
+		checkstyle.log.Fatal(err)
 	}
 
-	log.Info("Program has finished running")
+	checkstyle.log.Info("Program has finished running")
 	if err != nil {
-		log.Info("Error is not nil")
+		checkstyle.log.Info("Error is not nil")
 		errorMessage, err := ioutil.ReadAll(stderr)
 		if err != nil {
-			log.Warn("Failing to correctly marshal the error!")
-			log.Fatal(err)
+			checkstyle.log.Warn("Failing to correctly marshal the error!")
+			checkstyle.log.Fatal(err)
 		}
-		log.Info("Logging the result string")
-		log.Warn(string(errorMessage))
+		checkstyle.log.Info("Logging the result string")
+		checkstyle.log.Warn(string(errorMessage))
 		return "", err
 	}
 
 	checkstyle.listFiles()
 	contents, err := ioutil.ReadFile(checkstyle.outputLoc)
-	log.Infof("Logging output of file: %v", string(contents))
+	checkstyle.log.Infof("Logging output of file: %v", string(contents))
 	return string(contents), err
 }
 
@@ -218,14 +222,14 @@ func (checkstyle *checkstyleStep) launchCmd() (string, error) {
 func (checkstyle *checkstyleStep) listFiles() {
 	files, err := ioutil.ReadDir(checkstyle.srcDir)
 	if err != nil {
-		log.Fatalf("Error while listing directory: %v", err)
+		checkstyle.log.Fatalf("Error while listing directory: %v", err)
 	}
 
 	str := ""
 	for _, f := range files {
 		str += f.Name() + "\n"
 	}
-	log.Info("Files:\n%v", str)
+	checkstyle.log.Info("Files:\n%v", str)
 }
 
 func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
@@ -284,23 +288,23 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 // post-back comments to GitHub. GitHub only know the path from the base
 // of the directory, not the absolute path on the machine's filesystem.
 func (checkstyle *checkstyleStep) filterPath(ch *Checkstyle) *Checkstyle {
-	log.Info("Filtering the file paths...")
+	checkstyle.log.Info("Filtering the file paths...")
 	for index, f := range ch.File {
 		base, err := filepath.Abs(checkstyle.repoBase)
 		if err != nil {
-			log.Fatal(err)
+			checkstyle.log.Fatal(err)
 		}
 		regexDescriptor := fmt.Sprintf("^%s", base)
 		r := regexp.MustCompile(regexDescriptor)
 		fileName := f.Name
 		if loc := r.FindStringIndex(fileName); loc != nil {
-			log.Info("Found a match in the filename.")
+			checkstyle.log.Info("Found a match in the filename.")
 			start := loc[1] + 1
 			ch.File[index].Name = fileName[start:]
-			log.Warnf("Locations are: (%v, %v)", loc[0], loc[1])
-			log.Infof("File name is now %v\n and file.Name is now %v", ch.File[index].Name, f.Name)
+			checkstyle.log.Warnf("Locations are: (%v, %v)", loc[0], loc[1])
+			checkstyle.log.Infof("File name is now %v\n and file.Name is now %v", ch.File[index].Name, f.Name)
 		} else {
-			log.Warnf("Found a match in the filename.\nRegex Descriptor: '%s', filename: %s", regexDescriptor, fileName)
+			checkstyle.log.Warnf("Found a match in the filename.\nRegex Descriptor: '%s', filename: %s", regexDescriptor, fileName)
 		}
 	}
 	return ch

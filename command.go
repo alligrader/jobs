@@ -26,7 +26,6 @@ func (c *commandStep) Exec(request *pipeline.Request) *pipeline.Result {
 	out, err := c.cmd.Output()
 	if err != nil {
 		c.Cancel()
-		fmt.Println("FAILED")
 		return &pipeline.Result{
 			Error: err,
 		}
@@ -42,6 +41,5 @@ func (c *commandStep) Exec(request *pipeline.Request) *pipeline.Result {
 
 func (c *commandStep) Cancel() error {
 	c.Status("cancel step")
-	fmt.Println("Cancellation request made!")
 	return nil
 }
