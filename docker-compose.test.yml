@@ -1,0 +1,6 @@
+sut:
+    dockerfile: CI_Dockerfile
+    command: go test -v ./...
+    build: .
+    environment:
+        - GH_ACCESS_TOKEN

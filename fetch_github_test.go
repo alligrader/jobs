@@ -10,6 +10,7 @@ import (
 
 	"github.com/RobbieMcKinstry/pipeline"
 	"github.com/google/go-github/github"
+	"github.com/sirupsen/logrus"
 )
 
 func TestGitHubFetch(t *testing.T) {
@@ -18,7 +19,8 @@ func TestGitHubFetch(t *testing.T) {
 		owner, repo, ref = "alligrader", "TestRepo", "d6a5d32f84e346574aded51404010d4ad2817641"
 	)
 	var (
-		fetch = NewGithubStep(owner, repo, ref)
+		log   = logrus.New()
+		fetch = NewGithubStep(owner, repo, ref, log)
 		pipe  = pipeline.New(name, 1000)
 		stage = pipeline.NewStage(name, false, false)
 	)
@@ -56,6 +58,7 @@ func TestCommentStep(t *testing.T) {
 
 	httpclient := getClient()
 
+	var log = logrus.New()
 	var body, path = "Successful comment!", "README.md"
 	var position = 1
 	comment := &github.RepositoryComment{
@@ -69,6 +72,7 @@ func TestCommentStep(t *testing.T) {
 		repo:   repo,
 		sha:    sha,
 		client: client,
+		log:    log,
 	}
 	ctx := context.Background()
 
@@ -81,7 +85,7 @@ func TestCommentStep(t *testing.T) {
 func getClient() *http.Client {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: "8f23d9e3b9cc22d3be326928ee73c4880996de65"},
+		&oauth2.Token{AccessToken: os.Getenv("GH_ACCESS_TOKEN")},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	return tc

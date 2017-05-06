@@ -1,0 +1,16 @@
+FROM golang:1.8.1
+
+# Install Java and Clean
+RUN \
+  apt-get update && \
+  apt-get install -y openjdk-7-jdk && \
+  rm -rf /var/lib/apt/lists/*
+
+# Define commonly used JAVA_HOME variable
+ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
+
+COPY . /go/src/alligrader/jobs
+WORKDIR /go/src/alligrader/jobs
+RUN go get -d -v ./...
+RUN go get golang.org/x/oauth2
+RUN go install -v ./...
