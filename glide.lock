@@ -34,8 +34,6 @@ imports:
   version: f22b7ef81a0afac9ce1447d37e5ab8e99fbd2f73
 - name: github.com/RobbieMcKinstry/pipeline
   version: dd2f1fe37160138960632ab1fe68f31494d4a08e
-- name: github.com/sirupsen/logrus
-  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: github.com/ulikunitz/xz
   version: 3807218c9f4ed05861fa9eb75b8fb8afd3325a34
   subpackages:
