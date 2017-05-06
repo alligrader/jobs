@@ -4,15 +4,15 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"testing"
 
 	"github.com/RobbieMcKinstry/pipeline"
+	"github.com/sirupsen/logrus"
 )
 
-func ExampleFindBugs() {
+func exampleFindBugs() {
 
 	const (
 		name   = "test pipeline 1"
@@ -21,8 +21,9 @@ func ExampleFindBugs() {
 	)
 
 	var (
+		log          = logrus.New()
 		outputLoc, _ = ioutil.TempFile("", "findbugs.out")
-		fbgs         = NewFindbugsStep(jarLoc, outputLoc.Name(), srcDir, true)
+		fbgs         = NewFindbugsStep(jarLoc, outputLoc.Name(), srcDir, true, log)
 		workpipe     = pipeline.New(name, 10000)
 		stage        = pipeline.NewStage(name, false, false)
 	)
@@ -57,7 +58,7 @@ func ExampleFindBugs() {
 	// M C BIT: Bitwise OR of signed byte value computed in Main.main(String[])   At Main.java:[line 12]
 }
 
-func ExampleCheckstyle() {
+func exampleCheckstyle() {
 	const (
 		name   = "test pipeline 1"
 		jarLoc = "lib/checkstyle-7.6.1-all.jar"
@@ -66,8 +67,9 @@ func ExampleCheckstyle() {
 	)
 
 	var (
+		log          = logrus.New()
 		outputLoc, _ = ioutil.TempFile("", "findbugs.out")
-		checkstyle   = NewCheckstyleStep(jarLoc, outputLoc.Name(), srcDir, checks, true)
+		checkstyle   = NewCheckstyleStep(jarLoc, outputLoc.Name(), srcDir, checks, srcDir, true, log)
 		workpipe     = pipeline.New(name, 10000)
 		stage        = pipeline.NewStage(name, false, false)
 	)
