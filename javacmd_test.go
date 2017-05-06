@@ -58,7 +58,8 @@ func exampleFindBugs() {
 	// M C BIT: Bitwise OR of signed byte value computed in Main.main(String[])   At Main.java:[line 12]
 }
 
-func exampleCheckstyle() {
+// TODO find out why this doesn't include the text "[Needs Braces]" in the output. That seemed to work before we marshalled the text?
+func ExampleCheckstyle() {
 	const (
 		name   = "test pipeline 1"
 		jarLoc = "lib/checkstyle-7.6.1-all.jar"
@@ -69,7 +70,7 @@ func exampleCheckstyle() {
 	var (
 		log          = logrus.New()
 		outputLoc, _ = ioutil.TempFile("", "findbugs.out")
-		checkstyle   = NewCheckstyleStep(jarLoc, outputLoc.Name(), srcDir, checks, srcDir, true, log)
+		checkstyle   = NewCheckstyleStep(jarLoc, outputLoc.Name(), srcDir, checks, srcDir, false, log)
 		workpipe     = pipeline.New(name, 10000)
 		stage        = pipeline.NewStage(name, false, false)
 	)
@@ -93,17 +94,15 @@ func exampleCheckstyle() {
 		log.Fatal("No key 'checkstyle' in the response KeyVal")
 	}
 
-	if checks, ok := out.(string); ok {
-		fmt.Println(checks)
+	if checks, ok := out.(*Checkstyle); ok {
+		fmt.Println(checks.File[0].Error[0].Message)
 	} else {
-		log.Println("Value at keyVal[checkstyle] is not a string")
+		log.Println("Value at keyVal[checkstyle] is not a checkstyle struct")
 		log.Println(reflect.TypeOf(out))
 	}
 
 	// Output:
-	// Starting audit...
-	// [WARN] /Users/robbiemckinstry/workspace/go-workspace/src/github.com/alligrader/jobs/.test/src/Main.java:11: 'for' construct must use '{}'s. [NeedBraces]
-	// Audit done.
+	// 'for' construct must use '{}'s.
 }
 
 func TestCanReadSchema(t *testing.T) {

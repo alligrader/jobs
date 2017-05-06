@@ -269,6 +269,10 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 	// It's WAY less effecient to write to disk, read from disk into memory, and then decode
 	// First, I need to refactor "launchCmd" to be cleaner before I can do that, though.
 	ck, err := checkstyle.serialize(contents)
+	if err != nil {
+		checkstyle.log.Warn("Shutting down. Could not serialize the results.")
+		checkstyle.log.Fatal(err)
+	}
 	// TODO next, we need to filter out the file paths into something useful
 	// We can't use the absolute path because that contains the temporary directory as a base
 	// Iterate through all of the files and cut out the base path.
@@ -289,9 +293,11 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 // of the directory, not the absolute path on the machine's filesystem.
 func (checkstyle *checkstyleStep) filterPath(ch *Checkstyle) *Checkstyle {
 	checkstyle.log.Info("Filtering the file paths...")
+	checkstyle.log.Infof("There are %v files with errors\n", len(ch.File))
 	for index, f := range ch.File {
 		base, err := filepath.Abs(checkstyle.repoBase)
 		if err != nil {
+			checkstyle.log.Warn("Error in determining the absolute path. Exiting")
 			checkstyle.log.Fatal(err)
 		}
 		regexDescriptor := fmt.Sprintf("^%s", base)
@@ -307,6 +313,7 @@ func (checkstyle *checkstyleStep) filterPath(ch *Checkstyle) *Checkstyle {
 			checkstyle.log.Warnf("Found a match in the filename.\nRegex Descriptor: '%s', filename: %s", regexDescriptor, fileName)
 		}
 	}
+	checkstyle.log.Info("Finished filtering paths.")
 	return ch
 }
 
