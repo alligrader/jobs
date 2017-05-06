@@ -24,6 +24,7 @@ type commentStep struct {
 	pipeline.StepContext
 }
 
+// TODO return the struct, not the Interface
 func NewCommentStep(owner, repo, sha string, client *github.Client, logger *logrus.Logger) pipeline.Step {
 	logger.Warnf("Creating a new comment with ref %v", sha)
 	return &commentStep{
