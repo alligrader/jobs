@@ -183,20 +183,20 @@ func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		checkstyle.log.Warn("Failed to collect stdout pipe")
-		checkstyle.log.Fatal(err)
+		return nil, err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		checkstyle.log.Warn("Failed to collect stderr pipe")
-		checkstyle.log.Fatal(err)
+		return nil, err
 	}
 	if err = cmd.Start(); err != nil {
 		checkstyle.log.Warn("Failed to start the command")
-		checkstyle.log.Fatal(err)
+		return nil, err
 	}
 	var check *Checkstyle = &Checkstyle{}
 	if err = xml.NewDecoder(stdout).Decode(&check); err != nil {
-		checkstyle.log.Fatal(err)
+		return nil, err
 	}
 
 	if err = cmd.Wait(); err != nil {
@@ -210,7 +210,7 @@ func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 		errorMessage, err := ioutil.ReadAll(stderr)
 		if err != nil {
 			checkstyle.log.Warn("Failing to correctly marshal the error!")
-			checkstyle.log.Fatal(err)
+			return nil, err
 		}
 		checkstyle.log.Info("Logging the result string")
 		checkstyle.log.Warn(string(errorMessage))
