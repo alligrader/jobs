@@ -68,14 +68,11 @@ func ExampleCheckstyle() {
 	)
 
 	var (
-		log          = logrus.New()
-		outputLoc, _ = ioutil.TempFile("", "findbugs.out")
-		checkstyle   = NewCheckstyleStep(jarLoc, outputLoc.Name(), srcDir, checks, srcDir, false, log)
-		workpipe     = pipeline.New(name, 10000)
-		stage        = pipeline.NewStage(name, false, false)
+		log        = logrus.New()
+		checkstyle = NewCheckstyleStep(jarLoc, srcDir, checks, srcDir, false, log)
+		workpipe   = pipeline.New(name, 10000)
+		stage      = pipeline.NewStage(name, false, false)
 	)
-
-	defer os.Remove(outputLoc.Name())
 
 	stage.AddStep(checkstyle)
 	workpipe.AddStage(stage)

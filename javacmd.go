@@ -16,13 +16,12 @@ import (
 
 type (
 	checkstyleStep struct {
-		srcDir    string
-		jarLoc    string
-		outputLoc string
-		checkLoc  string
-		repoBase  string
-		text      bool
-		log       *logrus.Logger
+		srcDir   string
+		jarLoc   string
+		checkLoc string
+		repoBase string
+		text     bool
+		log      *logrus.Logger
 		pipeline.StepContext
 	}
 
@@ -38,7 +37,6 @@ type (
 	javacmd interface {
 		init(*pipeline.Request) error
 		setSrcDir(*pipeline.Request) error
-		launchCmd() (string, error)
 		Cmd() *exec.Cmd
 		pipeline.Step
 	}
@@ -46,7 +44,6 @@ type (
 
 const (
 	DefaultCheckstyleJarLoc    = "/checkstyle-7.6.1.jar"
-	DefaultCheckstyleOutputLoc = "/checkstyle_output.txt"
 	DefaultCheckstyleConfigLoc = "/checks.xml"
 	DefaultFindBugsJarLoc      = "/findbugs.jar"
 	DefaultFindBugsOutputLoc   = "/findbugs_output.txt"
@@ -54,8 +51,8 @@ const (
 
 	cmdTmplFindBugs       = "java -jar %s -textui -xml:withMessages -effort:max -output %s %s"
 	cmdTmplFindBugsText   = "java -jar %s -textui                   -effort:max -output %s %s"
-	cmdTmplCheckstyle     = "java -jar %s -c %s -o %s -f xml %s"
-	cmdTmplCheckstyleText = "java -jar %s -c %s -o %s %s"
+	cmdTmplCheckstyle     = "java -jar %s -c %s -f xml %s"
+	cmdTmplCheckstyleText = "java -jar %s -c %s %s"
 )
 
 // This line forces the compiler to check the method
@@ -73,15 +70,14 @@ func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool, logger *
 	}
 }
 
-func NewCheckstyleStep(jarLoc, outputLoc, srcDir, checkLoc, repoBase string, text bool, logger *logrus.Logger) pipeline.Step {
+func NewCheckstyleStep(jarLoc, srcDir, checkLoc, repoBase string, text bool, logger *logrus.Logger) pipeline.Step {
 	return &checkstyleStep{
-		srcDir:    srcDir,
-		jarLoc:    jarLoc,
-		outputLoc: outputLoc,
-		checkLoc:  checkLoc,
-		repoBase:  repoBase,
-		text:      text,
-		log:       logger,
+		srcDir:   srcDir,
+		jarLoc:   jarLoc,
+		checkLoc: checkLoc,
+		repoBase: repoBase,
+		text:     text,
+		log:      logger,
 	}
 }
 
@@ -121,10 +117,6 @@ func (checkstyle *checkstyleStep) init(request *pipeline.Request) error {
 	// Populate checkstyle.srcDir before populating repoBase instance variable
 	if checkstyle.repoBase == "" {
 		checkstyle.repoBase = checkstyle.srcDir
-	}
-
-	if checkstyle.outputLoc == "" {
-		checkstyle.outputLoc = DefaultCheckstyleOutputLoc
 	}
 
 	if checkstyle.checkLoc == "" {
@@ -185,18 +177,31 @@ func (fb *findbugsStep) launchCmd() (string, error) {
 	return string(contents), err
 }
 
-func (checkstyle *checkstyleStep) launchCmd() (string, error) {
+func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 
 	cmd := checkstyle.Cmd()
-	stderr, err := cmd.StdoutPipe()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		checkstyle.log.Warn("Failed to collect stdout pipe")
+		checkstyle.log.Fatal(err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		checkstyle.log.Warn("Failed to collect stderr pipe")
 		checkstyle.log.Fatal(err)
 	}
 	if err = cmd.Start(); err != nil {
+		checkstyle.log.Warn("Failed to start the command")
 		checkstyle.log.Fatal(err)
 	}
-	if err = cmd.Wait(); err != nil {
+	var check *Checkstyle = &Checkstyle{}
+	if err = xml.NewDecoder(stdout).Decode(&check); err != nil {
 		checkstyle.log.Fatal(err)
+	}
+
+	if err = cmd.Wait(); err != nil {
+		checkstyle.log.Warn("Failed to wait for command completion")
+		// Do not call Fatal because we need to dump stderr first.
 	}
 
 	checkstyle.log.Info("Program has finished running")
@@ -209,13 +214,12 @@ func (checkstyle *checkstyleStep) launchCmd() (string, error) {
 		}
 		checkstyle.log.Info("Logging the result string")
 		checkstyle.log.Warn(string(errorMessage))
-		return "", err
+		return nil, err
 	}
 
 	checkstyle.listFiles()
-	contents, err := ioutil.ReadFile(checkstyle.outputLoc)
-	checkstyle.log.Infof("Logging output of file: %v", string(contents))
-	return string(contents), err
+	checkstyle.log.Info("Completed the marshalling of the Checkstyle struct.")
+	return check, err
 }
 
 // TODO delete, only used for debugging purposes.
@@ -229,7 +233,7 @@ func (checkstyle *checkstyleStep) listFiles() {
 	for _, f := range files {
 		str += f.Name() + "\n"
 	}
-	checkstyle.log.Info("Files:\n%v", str)
+	checkstyle.log.Infof("Files:\n%v", str)
 }
 
 func (fb *findbugsStep) Exec(request *pipeline.Request) *pipeline.Result {
@@ -258,28 +262,15 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 	}
 
 	// Now, launch the command
-	contents, err := checkstyle.launchCmd()
+	check, err := checkstyle.launchCmd()
 	if err != nil {
 		return &pipeline.Result{Error: err}
 	}
 
-	// Serialize the command resuls into a struct
-	// TODO this should be done by piping STDOUT into a
-	// XMLDecoder, NOT by writing out to a file and then reading that file back in.
-	// It's WAY less effecient to write to disk, read from disk into memory, and then decode
-	// First, I need to refactor "launchCmd" to be cleaner before I can do that, though.
-	ck, err := checkstyle.serialize(contents)
-	if err != nil {
-		checkstyle.log.Warn("Shutting down. Could not serialize the results.")
-		checkstyle.log.Fatal(err)
-	}
-	// TODO next, we need to filter out the file paths into something useful
-	// We can't use the absolute path because that contains the temporary directory as a base
-	// Iterate through all of the files and cut out the base path.
-	ck = checkstyle.filterPath(ck)
+	check = checkstyle.filterPath(check)
 
 	nextMap := fromMap(request.KeyVal)
-	nextMap["checkstyle"] = ck
+	nextMap["checkstyle"] = check
 
 	return &pipeline.Result{
 		Error:  err,
@@ -363,7 +354,6 @@ func (checkstyle *checkstyleStep) Cmd() *exec.Cmd {
 		strTmpl,
 		checkstyle.jarLoc,
 		checkstyle.checkLoc,
-		checkstyle.outputLoc,
 		checkstyle.srcDir,
 	)
 
