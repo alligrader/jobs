@@ -71,6 +71,7 @@ func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool, logger *
 }
 
 func NewCheckstyleStep(jarLoc, srcDir, checkLoc, repoBase string, text bool, logger *logrus.Logger) pipeline.Step {
+	fmt.Println("New checkstyle step")
 	return &checkstyleStep{
 		srcDir:   srcDir,
 		jarLoc:   jarLoc,
@@ -102,6 +103,7 @@ func (fb *findbugsStep) init(request *pipeline.Request) error {
 
 func (checkstyle *checkstyleStep) init(request *pipeline.Request) error {
 
+	fmt.Println("Init checkstyle step")
 	if err := checkstyle.setSrcDir(request); err != nil {
 		return err
 	}
@@ -146,7 +148,7 @@ func (fb *findbugsStep) setSrcDir(request *pipeline.Request) error {
 }
 
 func (checkstyle *checkstyleStep) setSrcDir(request *pipeline.Request) error {
-
+	fmt.Println("set src dir")
 	if checkstyle.srcDir != "" {
 		return nil
 	}
@@ -179,6 +181,7 @@ func (fb *findbugsStep) launchCmd() (string, error) {
 
 func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 
+	fmt.Println("launch cmd beginning")
 	cmd := checkstyle.Cmd()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -196,6 +199,8 @@ func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 	}
 	var check *Checkstyle = &Checkstyle{}
 	if err = xml.NewDecoder(stdout).Decode(&check); err != nil {
+		checkstyle.log.Warn("Decoding failed!")
+		fmt.Println("Decoding failed")
 		return nil, err
 	}
 
@@ -217,6 +222,7 @@ func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 		return nil, err
 	}
 
+	fmt.Println("finished with the cmd")
 	checkstyle.listFiles()
 	checkstyle.log.Info("Completed the marshalling of the Checkstyle struct.")
 	return check, err
@@ -271,6 +277,7 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 
 	nextMap := fromMap(request.KeyVal)
 	nextMap["checkstyle"] = check
+	fmt.Println("totally done with the checkstyle step")
 
 	return &pipeline.Result{
 		Error:  err,
@@ -285,6 +292,7 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 func (checkstyle *checkstyleStep) filterPath(ch *Checkstyle) *Checkstyle {
 	checkstyle.log.Info("Filtering the file paths...")
 	checkstyle.log.Infof("There are %v files with errors\n", len(ch.File))
+	fmt.Println("filtering paths...")
 	for index, f := range ch.File {
 		base, err := filepath.Abs(checkstyle.repoBase)
 		if err != nil {
