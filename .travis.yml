@@ -1,5 +1,8 @@
 language: go
 
+before_script:
+ - set -e && which java
+
 go:
     - 1.8.1
     - master
