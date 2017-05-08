@@ -206,6 +206,8 @@ func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 		log.Warn("Decoding failed!")
 		log.Warn("Dumping Stdout")
 		dumpStream(stream2, log)
+		log.Warn("Dumping Stderr")
+		dumpStream(stderr, log)
 		return nil, err
 	}
 
