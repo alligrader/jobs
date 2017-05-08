@@ -1,9 +1,11 @@
 package jobs
 
 import (
+	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
@@ -71,7 +73,6 @@ func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool, logger *
 }
 
 func NewCheckstyleStep(jarLoc, srcDir, checkLoc, repoBase string, text bool, logger *logrus.Logger) pipeline.Step {
-	fmt.Println("New checkstyle step")
 	return &checkstyleStep{
 		srcDir:   srcDir,
 		jarLoc:   jarLoc,
@@ -103,7 +104,6 @@ func (fb *findbugsStep) init(request *pipeline.Request) error {
 
 func (checkstyle *checkstyleStep) init(request *pipeline.Request) error {
 
-	fmt.Println("Init checkstyle step")
 	if err := checkstyle.setSrcDir(request); err != nil {
 		return err
 	}
@@ -148,7 +148,6 @@ func (fb *findbugsStep) setSrcDir(request *pipeline.Request) error {
 }
 
 func (checkstyle *checkstyleStep) setSrcDir(request *pipeline.Request) error {
-	fmt.Println("set src dir")
 	if checkstyle.srcDir != "" {
 		return nil
 	}
@@ -179,53 +178,82 @@ func (fb *findbugsStep) launchCmd() (string, error) {
 	return string(contents), err
 }
 
+func (checkstyle *checkstyleStep) startCmd(cmd *exec.Cmd) error {
+	if err := cmd.Start(); err != nil {
+		checkstyle.log.Warn("Failed to start the command")
+		return err
+	}
+	return nil
+}
+
 func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 
-	fmt.Println("launch cmd beginning")
+	log := checkstyle.log
 	cmd := checkstyle.Cmd()
-	stdout, err := cmd.StdoutPipe()
+	stdout, stderr, err := checkstyle.captureOutput(cmd)
 	if err != nil {
-		checkstyle.log.Warn("Failed to collect stdout pipe")
+		log.Warn("Could not collect stdout/stderr")
 		return nil, err
 	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		checkstyle.log.Warn("Failed to collect stderr pipe")
+	tee, stream2 := checkstyle.teeStream(stdout)
+
+	if err = checkstyle.startCmd(cmd); err != nil {
 		return nil, err
 	}
-	if err = cmd.Start(); err != nil {
-		checkstyle.log.Warn("Failed to start the command")
-		return nil, err
-	}
+
 	var check *Checkstyle = &Checkstyle{}
-	if err = xml.NewDecoder(stdout).Decode(&check); err != nil {
-		checkstyle.log.Warn("Decoding failed!")
-		fmt.Println("Decoding failed")
+	if err = xml.NewDecoder(tee).Decode(&check); err != nil {
+		log.Warn("Decoding failed!")
+		dumpStream(stream2, log)
 		return nil, err
 	}
 
 	if err = cmd.Wait(); err != nil {
 		checkstyle.log.Warn("Failed to wait for command completion")
+		return nil, err
 		// Do not call Fatal because we need to dump stderr first.
 	}
 
 	checkstyle.log.Info("Program has finished running")
 	if err != nil {
-		checkstyle.log.Info("Error is not nil")
-		errorMessage, err := ioutil.ReadAll(stderr)
-		if err != nil {
-			checkstyle.log.Warn("Failing to correctly marshal the error!")
-			return nil, err
-		}
-		checkstyle.log.Info("Logging the result string")
-		checkstyle.log.Warn(string(errorMessage))
+		log.Info("Dumping STDOUT")
+		dumpStream(stream2, log)
+		log.Info("Dumping STDERR")
+		dumpStream(stderr, log)
 		return nil, err
 	}
 
-	fmt.Println("finished with the cmd")
 	checkstyle.listFiles()
 	checkstyle.log.Info("Completed the marshalling of the Checkstyle struct.")
 	return check, err
+}
+
+func dumpStream(stream io.Reader, log *logrus.Logger) {
+	b, err := ioutil.ReadAll(stream)
+	if err != nil {
+		log.Warn(err)
+	}
+
+	log.Infof("%s", b)
+}
+
+func (checkstyle *checkstyleStep) teeStream(stream io.Reader) (io.Reader, io.Reader) {
+	var buffer bytes.Buffer
+	var tee = io.TeeReader(stream, &buffer)
+	return tee, stream
+}
+
+func (checkstyle *checkstyleStep) captureOutput(cmd *exec.Cmd) (io.ReadCloser, io.ReadCloser, error) {
+	stdout, err1 := cmd.StdoutPipe()
+	stderr, err2 := cmd.StderrPipe()
+
+	if err1 != nil {
+		return nil, nil, err1
+	}
+	if err2 != nil {
+		return nil, nil, err2
+	}
+	return stdout, stderr, nil
 }
 
 // TODO delete, only used for debugging purposes.
@@ -277,7 +305,6 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 
 	nextMap := fromMap(request.KeyVal)
 	nextMap["checkstyle"] = check
-	fmt.Println("totally done with the checkstyle step")
 
 	return &pipeline.Result{
 		Error:  err,
@@ -292,7 +319,6 @@ func (checkstyle *checkstyleStep) Exec(request *pipeline.Request) *pipeline.Resu
 func (checkstyle *checkstyleStep) filterPath(ch *Checkstyle) *Checkstyle {
 	checkstyle.log.Info("Filtering the file paths...")
 	checkstyle.log.Infof("There are %v files with errors\n", len(ch.File))
-	fmt.Println("filtering paths...")
 	for index, f := range ch.File {
 		base, err := filepath.Abs(checkstyle.repoBase)
 		if err != nil {
