@@ -15,6 +15,8 @@ import (
 // POST /repos/:owner/:repo/commits/:sha/comments
 const githubCommentURL = "https://api.github.com/repos/%s/%s/commits/%s/comments"
 
+// CommentStep is takes Findbugs and Checkstyle output and comments it back to Github
+// TOOD should take an interface which itself returns a channel of github comments for sending...
 type CommentStep struct {
 	owner, repo, sha string
 	client           *github.Client
@@ -24,6 +26,7 @@ type CommentStep struct {
 	pipeline.StepContext
 }
 
+// NewCommentStep comments on GitHub the errors included in the injected request onto the provided owner, repo, and ref
 func NewCommentStep(owner, repo, sha string, client *github.Client, logger *logrus.Logger) *CommentStep {
 	logger.Warnf("Creating a new comment with ref %v", sha)
 	return &CommentStep{
@@ -96,6 +99,7 @@ func (c *CommentStep) logCheckstyleReport() {
 	c.log.Info(string(output))
 }
 
+// SendComment actually sends the provided comment to GitHub to display
 func (c *CommentStep) SendComment(ctx context.Context, client *github.Client, comment *github.RepositoryComment) error {
 
 	repoService := client.Repositories
@@ -110,6 +114,7 @@ func (c *CommentStep) SendComment(ctx context.Context, client *github.Client, co
 	return err
 }
 
+// Exec runs the CommentStep. Should be run as part of a pipeline, not executed directly.
 func (c *CommentStep) Exec(req *pipeline.Request) *pipeline.Result {
 	c.log.Warn("Beginning to exec the comment phase.")
 	c.init(req)
@@ -199,6 +204,7 @@ func (c *CommentStep) init(req *pipeline.Request) error {
 	return err
 }
 
+// Cancel is a no-op
 func (c *CommentStep) Cancel() error {
 	c.Status("cancel step...")
 	return nil
@@ -238,5 +244,4 @@ func extractCheckstyle(keyval map[string]interface{}, key string) (*Checkstyle, 
 	}
 
 	return ch, nil
-
 }

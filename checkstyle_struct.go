@@ -1,5 +1,6 @@
 package jobs
 
+// Checkstyle represents a structured representation over the XML output from the Checkstyle tool.
 type Checkstyle struct {
 	File []struct {
 		Name  string `xml:"name,attr"`

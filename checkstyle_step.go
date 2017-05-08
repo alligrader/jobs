@@ -16,6 +16,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// NewCheckstyleStep creates a new pipeline step for running Checkstyle over a source directory.
+// If any of the arguments are left as "", then they will use the package defaults instead.
 func NewCheckstyleStep(jarLoc, srcDir, checkLoc, repoBase string, text bool, logger *logrus.Logger) *CheckstyleStep {
 	return &CheckstyleStep{
 		srcDir:   srcDir,
@@ -87,7 +89,7 @@ func (checkstyle *CheckstyleStep) launchCmd() (*Checkstyle, error) {
 		return nil, err
 	}
 
-	var check *Checkstyle = &Checkstyle{}
+	var check = &Checkstyle{}
 	if err = xml.NewDecoder(tee).Decode(&check); err != nil {
 		log.Warn("Decoding failed!")
 		log.Warn("Dumping Stdout")
@@ -167,6 +169,7 @@ func (checkstyle *CheckstyleStep) startCmd(cmd *exec.Cmd) error {
 	return nil
 }
 
+// Exec will run the step with the provided *pipeline.Request. Should be run by the pipeline, not directly.
 func (checkstyle *CheckstyleStep) Exec(request *pipeline.Request) *pipeline.Result {
 
 	// Ensure all data is set
@@ -230,11 +233,14 @@ func (checkstyle *CheckstyleStep) serialize(blob string) (*Checkstyle, error) {
 	return &check, err
 }
 
+// Cancel will cancel the step. Does nothing.
+// Could be rewritten to kill the subprocess
 func (checkstyle *CheckstyleStep) Cancel() error {
 	checkstyle.Status("Cancel")
 	return nil
 }
 
+// Cmd returns a *exec.Cmd configued to run Checkstyle over the source code referenced in the CheckstyleStep struct.
 func (checkstyle *CheckstyleStep) Cmd() *exec.Cmd {
 	var strTmpl = cmdTmplCheckstyle
 

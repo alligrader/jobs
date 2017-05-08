@@ -15,23 +15,23 @@ type bugcollection struct {
 }
 
 type findbugssummary struct {
-	total_bugs         string         `xml:"total_bugs,attr"`
-	referenced_classes string         `xml:"referenced_classes,attr"`
-	num_packages       string         `xml:"num_packages,attr"`
-	peak_mbytes        string         `xml:"peak_mbytes,attr"`
-	gc_seconds         string         `xml:"gc_seconds,attr"`
-	vm_version         string         `xml:"vm_version,attr"`
-	cpu_seconds        string         `xml:"cpu_seconds,attr"`
-	alloc_mbytes       string         `xml:"alloc_mbytes,attr"`
-	timestamp          string         `xml:"timestamp,attr"`
-	total_size         string         `xml:"total_size,attr"`
-	priority_2         string         `xml:"priority_2,attr"`
-	total_classes      string         `xml:"total_classes,attr"`
-	java_version       string         `xml:"java_version,attr"`
-	clock_seconds      string         `xml:"clock_seconds,attr"`
-	priority_1         string         `xml:"priority_1,attr"`
-	packagestats       []packagestats `xml:"packagestats"`
-	classprofile       []classprofile `xml:"findbugsprofile>classprofile"`
+	totalBugs         string         `xml:"total_bugs,attr"`
+	referencedClasses string         `xml:"referenced_classes,attr"`
+	numPackages       string         `xml:"num_packages,attr"`
+	peakMBytes        string         `xml:"peak_mbytes,attr"`
+	gcSeconds         string         `xml:"gc_seconds,attr"`
+	vmVersion         string         `xml:"vm_version,attr"`
+	cpuSeconds        string         `xml:"cpu_seconds,attr"`
+	allocMBytes       string         `xml:"alloc_mbytes,attr"`
+	timestamp         string         `xml:"timestamp,attr"`
+	totalSize         string         `xml:"total_size,attr"`
+	priority2         string         `xml:"priority_2,attr"`
+	totalClasses      string         `xml:"total_classes,attr"`
+	javaVersion       string         `xml:"java_version,attr"`
+	clockSeconds      string         `xml:"clock_seconds,attr"`
+	priority1         string         `xml:"priority_1,attr"`
+	packagestats      []packagestats `xml:"packagestats"`
+	classprofile      []classprofile `xml:"findbugsprofile>classprofile"`
 }
 type sourceline struct {
 	sourcepath string `xml:"sourcepath,attr"`
@@ -80,13 +80,13 @@ type sourcelinetypebuginstance struct {
 	classname  string `xml:"classname,attr"`
 }
 type packagestats struct {
-	total_bugs  string       `xml:"total_bugs,attr"`
-	total_types string       `xml:"total_types,attr"`
-	priority_1  string       `xml:"priority_1,attr"`
-	priority_2  string       `xml:"priority_2,attr"`
-	total_size  string       `xml:"total_size,attr"`
-	pkg         string       `xml:"package,attr"`
-	classstats  []classstats `xml:"classstats"`
+	totalBugs  string       `xml:"total_bugs,attr"`
+	totalTypes string       `xml:"total_types,attr"`
+	priority1  string       `xml:"priority_1,attr"`
+	priority2  string       `xml:"priority_2,attr"`
+	totalSize  string       `xml:"total_size,attr"`
+	pkg        string       `xml:"package,attr"`
+	classstats []classstats `xml:"classstats"`
 }
 type buginstance struct {
 	category              string        `xml:"category,attr"`
@@ -161,8 +161,8 @@ type errorList struct {
 	missingclasses string   `xml:"missingclasses,attr"`
 }
 type classstats struct {
-	priority_2    string `xml:"priority_2,attr"`
-	priority_1    string `xml:"priority_1,attr"`
+	priority2     string `xml:"priority_2,attr"`
+	priority1     string `xml:"priority_1,attr"`
 	sourcefile    string `xml:"sourcefile,attr"`
 	interfacetype string `xml:"interface,attr"`
 	size          string `xml:"size,attr"`

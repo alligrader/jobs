@@ -11,6 +11,7 @@ import (
 )
 
 type (
+	// CheckstyleStep runs Checkstyle over the source code provided by the Request contenxt.
 	CheckstyleStep struct {
 		srcDir   string
 		jarLoc   string
@@ -39,11 +40,17 @@ type (
 )
 
 const (
-	DefaultCheckstyleJarLoc    = "/checkstyle-7.6.1.jar"
+	//DefaultCheckstyleJarLoc is where the Checkstlye Step looks for the jar if it isn't specified
+	DefaultCheckstyleJarLoc = "/checkstyle-7.6.1.jar"
+	// DefaultCheckstyleConfigLoc is where we look for the specification of which lints we look for
 	DefaultCheckstyleConfigLoc = "/checks.xml"
-	DefaultFindBugsJarLoc      = "/findbugs.jar"
-	DefaultFindBugsOutputLoc   = "/findbugs_output.txt"
-	DefaultSrcDir              = "/src"
+	// DefaultFindBugsJarLoc is the locaiton at which we look for the FindBugs jar
+	DefaultFindBugsJarLoc = "/findbugs.jar"
+	// DefaultFindBugsOutputLoc is where we save the FindBugs output if no other is specified
+	// Will soon be removed in favor of capturing the output with a pipe
+	DefaultFindBugsOutputLoc = "/findbugs_output.txt"
+	// DefaultSrcDir is where we look for the source code is no other location is provided
+	DefaultSrcDir = "/src"
 
 	cmdTmplFindBugs       = "java -jar %s -textui -xml:withMessages -effort:max -output %s %s"
 	cmdTmplFindBugsText   = "java -jar %s -textui                   -effort:max -output %s %s"
@@ -56,6 +63,7 @@ const (
 // to ensure that they both fulfill the javacmd interface
 var _, _ javacmd = &findbugsStep{}, &CheckstyleStep{}
 
+// NewFindbugsStep creates a new findbugs step. Not fully tested yet.
 func NewFindbugsStep(jarLoc, outputLoc, srcDir string, textoutput bool, logger *logrus.Logger) pipeline.Step {
 	return &findbugsStep{
 		jarLoc:    jarLoc,
@@ -140,7 +148,7 @@ func (fb *findbugsStep) Cancel() error {
 }
 
 func (fb *findbugsStep) Cmd() *exec.Cmd {
-	var strTmpl string = cmdTmplFindBugs
+	var strTmpl = cmdTmplFindBugs
 
 	if fb.text {
 		strTmpl = cmdTmplFindBugsText
