@@ -1,7 +1,11 @@
 language: go
 
-before_script:
- - set -e && which java
+before_install:
+    - go get -u github.com/golang/lint/golint
+
+script:
+    - golint ./...
+    - go test -v ./...
 
 go:
     - 1.8.1
