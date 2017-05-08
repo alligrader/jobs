@@ -212,17 +212,17 @@ func (c *CommentStep) Cancel() error {
 
 func extractStr(keyval map[string]interface{}, key string) (string, error) {
 	if keyval == nil {
-		return "", errors.New("KeyVal was nil.")
+		return "", errors.New("keyVal was nil")
 	}
 
 	val, ok := keyval[key]
 	if !ok {
-		return "", errors.New("Not such key...")
+		return "", errors.New("not such key")
 	}
 
 	str, ok := val.(string)
 	if !ok {
-		return "", errors.New("Value at key " + key + " is not a string")
+		return "", errors.New("value at key " + key + " is not a string")
 	}
 
 	return str, nil
@@ -230,17 +230,17 @@ func extractStr(keyval map[string]interface{}, key string) (string, error) {
 
 func extractCheckstyle(keyval map[string]interface{}, key string) (*Checkstyle, error) {
 	if keyval == nil {
-		return nil, errors.New("KeyVal was nil.")
+		return nil, errors.New("keyVal was nil")
 	}
 
 	val, ok := keyval[key]
 	if !ok {
-		return nil, errors.New("Not such key...")
+		return nil, errors.New("no such key")
 	}
 
 	ch, ok := val.(*Checkstyle)
 	if !ok {
-		return nil, errors.New("Value at key " + key + " is not type(*Checkstyle)")
+		return nil, errors.New("value at key " + key + " is not type(*Checkstyle)")
 	}
 
 	return ch, nil

@@ -101,12 +101,12 @@ func (fb *findbugsStep) setSrcDir(request *pipeline.Request) error {
 
 	srcDirIntf, ok := request.KeyVal["archive"]
 	if !ok {
-		return errors.New("No source directory set.")
+		return errors.New("no source directory set")
 	}
 
 	srcDir, ok := srcDirIntf.(string)
 	if !ok {
-		return errors.New("Source directory is not a string")
+		return errors.New("source directory is not a string")
 	}
 	fb.srcDir = srcDir
 	return nil

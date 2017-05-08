@@ -62,7 +62,7 @@ func (checkstyle *CheckstyleStep) setSrcDir(request *pipeline.Request) error {
 
 	srcDirIntf, ok := request.KeyVal["archive"]
 	if !ok {
-		return errors.New("No source directory set.")
+		return errors.New("no source directory set")
 	}
 
 	srcDir, ok := srcDirIntf.(string)
