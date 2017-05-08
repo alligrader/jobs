@@ -59,7 +59,7 @@ func exampleFindBugs() {
 }
 
 // TODO find out why this doesn't include the text "[Needs Braces]" in the output. That seemed to work before we marshalled the text?
-func ExampleCheckstyle() {
+func exampleCheckstyle() {
 	const (
 		name   = "test pipeline 1"
 		jarLoc = "lib/checkstyle-7.6.1-all.jar"
@@ -107,7 +107,7 @@ func TestCanReadSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var bugs BugCollection
+	var bugs bugcollection
 	err = xml.Unmarshal(contents, &bugs)
 	if err != nil {
 		t.Fatal(err)

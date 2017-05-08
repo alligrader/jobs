@@ -7,21 +7,24 @@ import (
 	"github.com/RobbieMcKinstry/pipeline"
 )
 
+// CommandStep is a pipeline step for running a given string as a Bash command.
 // Make a function that takes a command and returns a pipeline.Step from the string.
-type commandStep struct {
+type CommandStep struct {
 	name string
 	cmd  *exec.Cmd
 	pipeline.StepContext
 }
 
-func NewStepFromCommand(name, command string) pipeline.Step {
-	return &commandStep{
+// NewStepFromCommand creates a new CommandStep from the given string, using running `bash -C <string>`
+func NewStepFromCommand(name, command string) *CommandStep {
+	return &CommandStep{
 		name: name,
 		cmd:  exec.Command("bash", "-c", command),
 	}
 }
 
-func (c *commandStep) Exec(request *pipeline.Request) *pipeline.Result {
+// Exec runs the command step, should be run by the pipeline, not directly.
+func (c *CommandStep) Exec(request *pipeline.Request) *pipeline.Result {
 	c.Status(fmt.Sprintf("%+v", request))
 	out, err := c.cmd.Output()
 	if err != nil {
@@ -39,7 +42,8 @@ func (c *commandStep) Exec(request *pipeline.Request) *pipeline.Result {
 	}
 }
 
-func (c *commandStep) Cancel() error {
+// Cancel is a no-op, required to implement the pipeline step interface
+func (c *CommandStep) Cancel() error {
 	c.Status("cancel step")
 	return nil
 }

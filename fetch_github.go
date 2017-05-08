@@ -20,7 +20,8 @@ const githubURL = "https://api.github.com/repos/%s/%s/%s/%s"
 
 // "GET /repos/:owner/:repo/:archive_format/:ref"
 
-type githubFetchStep struct {
+// GithubFetchStep will download the source code for the given **public** repo (should inject the correct client to fetch a private repo)
+type GithubFetchStep struct {
 	owner string
 	repo  string
 	ref   string
@@ -28,8 +29,9 @@ type githubFetchStep struct {
 	pipeline.StepContext
 }
 
-func NewGithubStep(owner, repo, ref string, logger *logrus.Logger) pipeline.Step {
-	return &githubFetchStep{
+// NewGithubStep takes what is essentially the URL of the repo and the ref to download
+func NewGithubStep(owner, repo, ref string, logger *logrus.Logger) *GithubFetchStep {
+	return &GithubFetchStep{
 		owner: owner,
 		repo:  repo,
 		ref:   ref,
@@ -43,7 +45,8 @@ func NewGithubStepFromEnvironment() pipeline.Step {
 	return NewGithubStep(os.Getenv("OWNER"), os.Getenv("REPO"), os.Getenv("REF"), nil)
 }
 
-func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
+// Exec runs the step. Should not be run directly.
+func (g *GithubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 	g.Status(fmt.Sprintf("%+v", request))
 
 	// Generate the URL to ping GitHub
@@ -128,7 +131,8 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 	}
 }
 
-func (g *githubFetchStep) Cancel() error {
+// Cancel is a no-op
+func (g *GithubFetchStep) Cancel() error {
 	g.Status("cancel step")
 	return nil
 }

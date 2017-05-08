@@ -15,18 +15,21 @@ import (
 // POST /repos/:owner/:repo/commits/:sha/comments
 const githubCommentURL = "https://api.github.com/repos/%s/%s/commits/%s/comments"
 
-type commentStep struct {
+// CommentStep is takes Findbugs and Checkstyle output and comments it back to Github
+// TOOD should take an interface which itself returns a channel of github comments for sending...
+type CommentStep struct {
 	owner, repo, sha string
 	client           *github.Client
 	checkstyleReport *Checkstyle
-	findbugsReport   *BugCollection
+	findbugsReport   *bugcollection
 	log              *logrus.Logger
 	pipeline.StepContext
 }
 
-func NewCommentStep(owner, repo, sha string, client *github.Client, logger *logrus.Logger) pipeline.Step {
+// NewCommentStep comments on GitHub the errors included in the injected request onto the provided owner, repo, and ref
+func NewCommentStep(owner, repo, sha string, client *github.Client, logger *logrus.Logger) *CommentStep {
 	logger.Warnf("Creating a new comment with ref %v", sha)
-	return &commentStep{
+	return &CommentStep{
 		owner:  owner,
 		repo:   repo,
 		sha:    sha,
@@ -35,7 +38,7 @@ func NewCommentStep(owner, repo, sha string, client *github.Client, logger *logr
 	}
 }
 
-func (c *commentStep) loadCheckstyle(req *pipeline.Request) error {
+func (c *CommentStep) loadCheckstyle(req *pipeline.Request) error {
 	var (
 		str     string
 		err     error
@@ -53,12 +56,12 @@ func (c *commentStep) loadCheckstyle(req *pipeline.Request) error {
 	return err
 }
 
-func (c *commentStep) loadFindbugs(req *pipeline.Request) error {
+func (c *CommentStep) loadFindbugs(req *pipeline.Request) error {
 	var (
 		str      string
 		err      error
 		decoder  *xml.Decoder
-		findbugs BugCollection
+		findbugs bugcollection
 	)
 	str, err = extractStr(req.KeyVal, "findbugs")
 	if err != nil {
@@ -71,12 +74,12 @@ func (c *commentStep) loadFindbugs(req *pipeline.Request) error {
 	return err
 }
 
-func (c *commentStep) logReports() {
+func (c *CommentStep) logReports() {
 	c.logFindbugsReport()
 	c.logCheckstyleReport()
 }
 
-func (c *commentStep) logFindbugsReport() {
+func (c *CommentStep) logFindbugsReport() {
 
 	output, err := xml.MarshalIndent(c.findbugsReport, "  ", "    ")
 	if err != nil {
@@ -86,7 +89,7 @@ func (c *commentStep) logFindbugsReport() {
 	c.log.Info(string(output))
 }
 
-func (c *commentStep) logCheckstyleReport() {
+func (c *CommentStep) logCheckstyleReport() {
 
 	output, err := xml.MarshalIndent(c.checkstyleReport, "  ", "    ")
 	if err != nil {
@@ -96,7 +99,8 @@ func (c *commentStep) logCheckstyleReport() {
 	c.log.Info(string(output))
 }
 
-func (c *commentStep) SendComment(ctx context.Context, client *github.Client, comment *github.RepositoryComment) error {
+// SendComment actually sends the provided comment to GitHub to display
+func (c *CommentStep) SendComment(ctx context.Context, client *github.Client, comment *github.RepositoryComment) error {
 
 	repoService := client.Repositories
 	if c.sha == "" {
@@ -110,7 +114,8 @@ func (c *commentStep) SendComment(ctx context.Context, client *github.Client, co
 	return err
 }
 
-func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
+// Exec runs the CommentStep. Should be run as part of a pipeline, not executed directly.
+func (c *CommentStep) Exec(req *pipeline.Request) *pipeline.Result {
 	c.log.Warn("Beginning to exec the comment phase.")
 	c.init(req)
 
@@ -162,7 +167,7 @@ func (c *commentStep) Exec(req *pipeline.Request) *pipeline.Result {
 	return nil
 }
 
-func (c *commentStep) init(req *pipeline.Request) error {
+func (c *CommentStep) init(req *pipeline.Request) error {
 	var err error
 
 	check, err := extractCheckstyle(req.KeyVal, "checkstyle")
@@ -199,24 +204,25 @@ func (c *commentStep) init(req *pipeline.Request) error {
 	return err
 }
 
-func (c *commentStep) Cancel() error {
+// Cancel is a no-op
+func (c *CommentStep) Cancel() error {
 	c.Status("cancel step...")
 	return nil
 }
 
 func extractStr(keyval map[string]interface{}, key string) (string, error) {
 	if keyval == nil {
-		return "", errors.New("KeyVal was nil.")
+		return "", errors.New("keyVal was nil")
 	}
 
 	val, ok := keyval[key]
 	if !ok {
-		return "", errors.New("Not such key...")
+		return "", errors.New("not such key")
 	}
 
 	str, ok := val.(string)
 	if !ok {
-		return "", errors.New("Value at key " + key + " is not a string")
+		return "", errors.New("value at key " + key + " is not a string")
 	}
 
 	return str, nil
@@ -224,19 +230,18 @@ func extractStr(keyval map[string]interface{}, key string) (string, error) {
 
 func extractCheckstyle(keyval map[string]interface{}, key string) (*Checkstyle, error) {
 	if keyval == nil {
-		return nil, errors.New("KeyVal was nil.")
+		return nil, errors.New("keyVal was nil")
 	}
 
 	val, ok := keyval[key]
 	if !ok {
-		return nil, errors.New("Not such key...")
+		return nil, errors.New("no such key")
 	}
 
 	ch, ok := val.(*Checkstyle)
 	if !ok {
-		return nil, errors.New("Value at key " + key + " is not type(*Checkstyle)")
+		return nil, errors.New("value at key " + key + " is not type(*Checkstyle)")
 	}
 
 	return ch, nil
-
 }

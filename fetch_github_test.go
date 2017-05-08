@@ -67,7 +67,7 @@ func TestCommentStep(t *testing.T) {
 		Position: &position,
 	}
 	client := github.NewClient(httpclient)
-	commentStep := &commentStep{
+	commentStep := &CommentStep{
 		owner:  owner,
 		repo:   repo,
 		sha:    sha,
