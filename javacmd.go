@@ -204,6 +204,7 @@ func (checkstyle *checkstyleStep) launchCmd() (*Checkstyle, error) {
 	var check *Checkstyle = &Checkstyle{}
 	if err = xml.NewDecoder(tee).Decode(&check); err != nil {
 		log.Warn("Decoding failed!")
+		log.Warn("Dumping Stdout")
 		dumpStream(stream2, log)
 		return nil, err
 	}
@@ -234,7 +235,7 @@ func dumpStream(stream io.Reader, log *logrus.Logger) {
 		log.Warn(err)
 	}
 
-	log.Infof("%s", b)
+	log.Infof("Stdout is: %s", b)
 }
 
 func (checkstyle *checkstyleStep) teeStream(stream io.Reader) (io.Reader, io.Reader) {
