@@ -20,7 +20,7 @@ const githubURL = "https://api.github.com/repos/%s/%s/%s/%s"
 
 // "GET /repos/:owner/:repo/:archive_format/:ref"
 
-type githubFetchStep struct {
+type GithubFetchStep struct {
 	owner string
 	repo  string
 	ref   string
@@ -28,8 +28,8 @@ type githubFetchStep struct {
 	pipeline.StepContext
 }
 
-func NewGithubStep(owner, repo, ref string, logger *logrus.Logger) pipeline.Step {
-	return &githubFetchStep{
+func NewGithubStep(owner, repo, ref string, logger *logrus.Logger) *GithubFetchStep {
+	return &GithubFetchStep{
 		owner: owner,
 		repo:  repo,
 		ref:   ref,
@@ -43,7 +43,7 @@ func NewGithubStepFromEnvironment() pipeline.Step {
 	return NewGithubStep(os.Getenv("OWNER"), os.Getenv("REPO"), os.Getenv("REF"), nil)
 }
 
-func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
+func (g *GithubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 	g.Status(fmt.Sprintf("%+v", request))
 
 	// Generate the URL to ping GitHub
@@ -128,7 +128,7 @@ func (g *githubFetchStep) Exec(request *pipeline.Request) *pipeline.Result {
 	}
 }
 
-func (g *githubFetchStep) Cancel() error {
+func (g *GithubFetchStep) Cancel() error {
 	g.Status("cancel step")
 	return nil
 }
